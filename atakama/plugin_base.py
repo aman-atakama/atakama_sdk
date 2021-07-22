@@ -1,4 +1,5 @@
-# todo: move this to a public "atakama" repo
+"""Atakama plugin base lib."""
+
 import abc
 
 from typing import TypeVar, List, Type, Any, Dict
