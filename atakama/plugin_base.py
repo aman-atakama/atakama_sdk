@@ -66,4 +66,4 @@ class FileChangedPlugin(Plugin):
         """
 
 
-__all__ = ["DetectorPlugin", "FileChangedPlugin"]
+__all__ = ["Plugin", "DetectorPlugin", "FileChangedPlugin"]

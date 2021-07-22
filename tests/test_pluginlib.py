@@ -1,5 +1,6 @@
-from atakama import DetectorPlugin, FileChangedPlugin
-from atakama.plugin_base import Plugin
+# note: do not move these packages around!
+
+from atakama import DetectorPlugin, FileChangedPlugin, Plugin
 
 def test_simple_detector():
     # we just test that we can write a class to spec
@@ -28,6 +29,6 @@ def test_simple_fchange():
             return
 
     assert Plugin.get_by_name("yo") is ExamplePlugin
-    
+
     ExamplePlugin({"arg": 1})
 
