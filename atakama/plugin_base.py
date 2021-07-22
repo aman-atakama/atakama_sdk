@@ -18,7 +18,7 @@ class Plugin(abc.ABC):
 
     _all_plugins_by_name: Dict[str, Type["Plugin"]] = {}
 
-    SDK_VERSiON = 1
+    SDK_VERSION = 1
 
     def __init__(self, args: Any):
         """Init instance, passing args defined in the config file.
