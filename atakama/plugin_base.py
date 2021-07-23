@@ -8,14 +8,19 @@ from typing import TypeVar, List, Type, Any, Dict
 
 SDK_VERSION_NAME = "ATAKAMA_SDK_VERSION"
 
+
 def is_abstract(cls):
     """Return true if the class has __abstractmethods__"""
     return bool(getattr(cls, "__abstractmethods__", False))
 
+
 def strip_ext(text):
     return os.path.splitext(text)[0]
 
+
 def look_for_sdk_version(module):
+    """Look for the sdk version at the package level for plugins."""
+
     mod = sys.modules.get(module)
     if mod and hasattr(mod, SDK_VERSION_NAME):
         return getattr(mod, SDK_VERSION_NAME)
@@ -47,7 +52,6 @@ class Plugin(abc.ABC):
     CURRENT_SDK_VERSION = 1
     _all_plugins_by_name: Dict[str, Type["Plugin"]] = {}
 
-
     def __init__(self, args: Any):
         """Init instance, passing args defined in the config file.
 
@@ -72,13 +76,25 @@ class Plugin(abc.ABC):
         """Return a plugin based on the name."""
         return cls._all_plugins_by_name[name]
 
-
     @classmethod
     def get_sdk_version(cls) -> float:
+        """Get the compatible sdk version.
+
+        By default, looks in the current module's .sdk_version for the ATAKAMA_SDK_VERSION variable.
+
+
+        Plugin makers can override this.
+
+        For example, it's possible to make a plugin that's compatible with many versions.
+
+        Or you can choose to package your signed plugins differently.
+        """
+
         version = look_for_sdk_version(cls.__module__)
         if not version:
             raise PluginVersionMissingError("no version for %s" % cls.__name__)
         return version
+
 
 class DetectorPlugin(Plugin):
     @abc.abstractmethod
@@ -104,4 +120,10 @@ class FileChangedPlugin(Plugin):
         """
 
 
-__all__ = ["Plugin", "DetectorPlugin", "FileChangedPlugin", "SDK_VERSION_NAME", "PluginVersionMissingError"]
+__all__ = [
+    "Plugin",
+    "DetectorPlugin",
+    "FileChangedPlugin",
+    "SDK_VERSION_NAME",
+    "PluginVersionMissingError",
+]
