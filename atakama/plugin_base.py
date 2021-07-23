@@ -1,13 +1,41 @@
 """Atakama plugin base lib."""
 
 import abc
-
+import os
+import sys
+import importlib
 from typing import TypeVar, List, Type, Any, Dict
 
+SDK_VERSION_NAME = "ATAKAMA_SDK_VERSION"
 
 def is_abstract(cls):
     """Return true if the class has __abstractmethods__"""
     return bool(getattr(cls, "__abstractmethods__", False))
+
+def strip_ext(text):
+    return os.path.splitext(text)[0]
+
+def look_for_sdk_version(module):
+    mod = sys.modules.get(module)
+    if mod and hasattr(mod, SDK_VERSION_NAME):
+        return getattr(mod, SDK_VERSION_NAME)
+
+    try:
+        # we look for a module named sdk_version
+        mod = importlib.import_module(module + ".sdk_version")
+        return getattr(mod, SDK_VERSION_NAME)
+    except ImportError:
+        pass
+
+    parent_module = strip_ext(module)
+    if "." in parent_module:
+        return look_for_sdk_version(parent_module)
+
+    return None
+
+
+class PluginVersionMissingError(RuntimeError):
+    pass
 
 
 T = TypeVar("T")
@@ -16,9 +44,9 @@ T = TypeVar("T")
 class Plugin(abc.ABC):
     """Derive from this class to make a new plugin type."""
 
+    CURRENT_SDK_VERSION = 1
     _all_plugins_by_name: Dict[str, Type["Plugin"]] = {}
 
-    SDK_VERSION = 1
 
     def __init__(self, args: Any):
         """Init instance, passing args defined in the config file.
@@ -45,6 +73,13 @@ class Plugin(abc.ABC):
         return cls._all_plugins_by_name[name]
 
 
+    @classmethod
+    def get_sdk_version(cls) -> float:
+        version = look_for_sdk_version(cls.__module__)
+        if not version:
+            raise PluginVersionMissingError("no version for %s" % cls.__name__)
+        return version
+
 class DetectorPlugin(Plugin):
     @abc.abstractmethod
     def needs_encryption(self, full_path) -> bool:
@@ -69,4 +104,4 @@ class FileChangedPlugin(Plugin):
         """
 
 
-__all__ = ["Plugin", "DetectorPlugin", "FileChangedPlugin"]
+__all__ = ["Plugin", "DetectorPlugin", "FileChangedPlugin", "SDK_VERSION_NAME", "PluginVersionMissingError"]

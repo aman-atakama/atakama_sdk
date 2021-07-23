@@ -11,7 +11,7 @@ lint:
 	black atakama
 
 test:
-	PYTHONPATH=. pytest --cov atakama -v tests
+	PYTHONPATH=. pytest --cov atakama --cov-fail-under=100 -v tests
 
 publish:
 	rm -rf dist
