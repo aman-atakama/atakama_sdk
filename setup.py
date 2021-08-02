@@ -21,5 +21,5 @@ setup(
     long_description_content_type="text/markdown",
     setup_requires=["wheel"],
     install_requires=[],
-    entry_points={},
+    entry_points={"console_scripts": "atakama-pkg=atakama.packager:main"},
 )
