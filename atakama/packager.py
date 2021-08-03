@@ -1,11 +1,14 @@
 import argparse
 import os
+import shutil
 import subprocess
 import sys
+import tempfile
 import textwrap
+from contextlib import suppress
 from shutil import which
-from zipfile import ZipFile
-
+from typing import List
+from zipfile import ZipFile, ZipInfo
 
 class Packager:
     def __init__(self, src=None, pkg=None, key=None, crt=None, self_signed=False, openssl=None):
@@ -59,12 +62,17 @@ class Packager:
 
     def run_setup(self):
         from distutils.core import run_setup
-        dist = run_setup(self.setup_path, script_args=["bdist_wheel"], stop_after='run')
-        for typ, ver, path in getattr(dist, "dist_files"):
-            if typ == "bdist_wheel":
-                self.pkg = path
-                return
-        raise ValueError("Expected package not created")
+        wd = os.getcwd()
+        try:
+            os.chdir(os.path.dirname(self.src))
+            dist = run_setup(self.setup_path, script_args=["bdist_wheel"], stop_after='run')
+            for typ, ver, path in getattr(dist, "dist_files"):
+                if typ == "bdist_wheel":
+                    self.pkg = os.path.abspath(path)
+                    return
+            raise ValueError("Expected package not created")
+        finally:
+            os.chdir(wd)
 
     def has_setup(self):
         return os.path.exists(self.setup_path)
@@ -75,13 +83,13 @@ class Packager:
             f.write(textwrap.dedent("""
         from setuptools import setup
         setup(
-            name="atakama_generic_plugin",
+            name="{plug_name}",
             version="1.0",
-            description="atakama generic plugin",
-            packages=["."],
+            description="{plug_name}",
+            packages=["{plug_name}"],
             setup_requires=["wheel"],
         )
-            """))
+            """.format(src=self.src, plug_name=os.path.basename(self.src))))
 
     def remove_setup(self):
         os.remove(self.setup_path)
@@ -98,17 +106,15 @@ class Packager:
 
         sig = pkg + ".sig"
         self.openssl(["dgst", "-sha256", "-sign", key, "-out", sig, pkg], check=True)
-        self.verify_package(pkg, sig, crt)
+        self.verify_signature(crt, pkg, sig)
 
-    def verify_package(self, pkg, sig, crt):
-        ret = self.openssl(["x509", "-in", crt, "-pubkey", "-noout"], check=True, stdout=subprocess.PIPE)
-        pub = crt + ".pub"
-        with open(pub, "wb") as f:
-            f.write(ret.stdout)
-        self.openssl(["dgst", "-sha256", "-verify", pub, "-signature", sig, pkg], check=True)
-
-    def verify_certificate(self, crt):
-        self.openssl(["verify", crt], check=True)
+    @staticmethod
+    def verify_certificate(crt):
+        from certvalidator import CertificateValidator
+        with open(crt, 'rb') as f:
+            end_entity_cert = f.read()
+        validator = CertificateValidator(end_entity_cert)
+        validator.validate_usage({'digital_signature'})
 
     def zip_package(self):
         crt = self.crt
@@ -116,11 +122,54 @@ class Packager:
         sig = pkg + ".sig"
         final = pkg + ".apkg"
         with ZipFile(final, 'w') as myzip:
-            myzip.write(pkg)
-            myzip.write(sig)
+            myzip.write(pkg, arcname=os.path.basename(pkg))
+            myzip.write(sig, arcname=os.path.basename(sig))
             myzip.write(crt, arcname="cert")
         print("wrote package", final, file=sys.stderr)
         return final
+
+    @classmethod
+    def unpack_plugin(cls, path, dest_dir, self_signed=False):
+        with ZipFile(path) as zip:
+            ent: ZipInfo
+            wheels: List[ZipInfo] = []
+            for ent in zip.infolist():
+                if ent.filename.endswith(".whl"):
+                    wheels += [ent]
+
+            tmpdir = tempfile.mkdtemp("-apkg")
+            try:
+                crt = zip.getinfo("cert")
+                crt = zip.extract(crt, tmpdir)
+
+                if not self_signed:
+                    cls.verify_certificate(crt)
+
+                for whl in wheels:
+                    sig = whl.filename + ".sig"
+                    whl = zip.extract(whl, tmpdir)
+                    sig = zip.extract(sig, tmpdir)
+                    cls.verify_signature(crt, whl, sig)
+
+                    with ZipFile(whl) as wzip:
+                        wzip.extractall(dest_dir)
+            finally:
+                shutil.rmtree(tmpdir)
+
+    @staticmethod
+    def verify_signature(crt, whl, sig):
+        from oscrypto.asymmetric import load_certificate, rsa_pkcs1v15_verify
+
+        cert_obj = load_certificate(crt)
+
+        # Load the payload contents and the signature.
+        with open(whl, 'rb') as f:
+            payload_contents = f.read()
+
+        with open(sig, 'rb') as f:
+            signature = f.read()
+
+        rsa_pkcs1v15_verify(cert_obj, signature, payload_contents, "sha256")
 
 def main():
     try:

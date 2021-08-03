@@ -20,6 +20,6 @@ setup(
     long_description=long_description(),
     long_description_content_type="text/markdown",
     setup_requires=["wheel"],
-    install_requires=[],
+    install_requires=["oscrypto"],
     entry_points={"console_scripts": "atakama-pkg=atakama.packager:main"},
 )

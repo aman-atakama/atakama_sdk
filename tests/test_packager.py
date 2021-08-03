@@ -24,7 +24,7 @@ def self_signed_cert(tmp_path_factory):
     Path(priv).unlink()
     Path(crt).unlink()
 
-def test_package_main(self_signed_cert):
+def test_package_main(self_signed_cert, tmp_path):
     priv, crt = self_signed_cert
     assert EXAMPLE_RUNCMD_PATH.exists()
 
@@ -34,13 +34,21 @@ def test_package_main(self_signed_cert):
 
     # have to pass self-signed to generate an apkg file
     sys.argv = ["whatever", "--src", str(EXAMPLE_RUNCMD_PATH), "--key", priv, "--crt", crt, "--self-signed"]
+    pkg_dir = EXAMPLE_RUNCMD_PATH.parent
+    dist_dir = pkg_dir / "dist"
     main()
-    Path("dist").is_dir()
-    assert any(file.suffix == ".apkg" for file in Path("dist").iterdir())
+    assert dist_dir.is_dir()
+    (final, ) = [file for file in dist_dir.iterdir() if file.suffix == ".apkg"]
+
+    Packager.unpack_plugin(final, tmp_path, self_signed=True)
+
+    files = set(Path(f).name for f in Path(tmp_path).glob("runcmd/*.py"))
+    assert "subproc_detector.py" in files
+    assert "sdk_version.py" in files
 
 def test_not_valid_cert(self_signed_cert):
     # self signed are not valid
     _, crt = self_signed_cert
     p = Packager()
-    with pytest.raises(subprocess.CalledProcessError):
+    with pytest.raises(Exception):
         p.verify_certificate(crt)
