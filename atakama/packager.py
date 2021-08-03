@@ -5,13 +5,27 @@ import subprocess
 import sys
 import tempfile
 import textwrap
-from contextlib import suppress
 from shutil import which
 from typing import List
 from zipfile import ZipFile, ZipInfo
+from distutils.core import run_setup
+from certvalidator import CertificateValidator
+from oscrypto.asymmetric import load_certificate, rsa_pkcs1v15_verify
+
 
 class Packager:
-    def __init__(self, src=None, pkg=None, key=None, crt=None, self_signed=False, openssl=None):
+    """Class to manage the packing and unpacking of atakama plugins.
+
+    Mostly, plugins are just wheels that get loaded at runtime.
+
+    A package consists of wheels, signatures and a cert.
+
+    Wheels are just unpacked into the plugins/ folder.
+    """
+
+    def __init__(
+        self, src=None, pkg=None, key=None, crt=None, self_signed=False, openssl=None
+    ):
         self.pkg = pkg
         self.src = src
         self.key = key
@@ -24,49 +38,63 @@ class Packager:
 
     @classmethod
     def from_args(cls, argv):
+        """Given sys args, return a packager."""
         args = cls.parse_args(argv)
-        return Packager(src=args.src, pkg=args.pkg,
-                        key=args.key, crt=args.crt,
-                        self_signed=args.self_signed, openssl=args.openssl)
+        return Packager(
+            src=args.src,
+            pkg=args.pkg,
+            key=args.key,
+            crt=args.crt,
+            self_signed=args.self_signed,
+            openssl=args.openssl,
+        )
 
     @staticmethod
     def parse_args(argv):
-        parser = argparse.ArgumentParser(description="Atakama plugin packaging helper", epilog="""
+        """Command line argument parser."""
+        parser = argparse.ArgumentParser(
+            description="Atakama plugin packaging helper",
+            epilog="""
 
-        An atakama plugin package consists of a python installable package, and an openssl signature file.
+        An atakama plugin package consists of a python installable package, an openssl signature file,
+        and a certificate.
 
-        These two files are located in the same zip.
+        These three files are located in the same zip.
 
-
-        It is installed by installing the package into the plugins folder.
+        It is installed by installing the package into the "plugins" folder.
 
         The python package can be:
-
             - a simple zip of sources
-            - a binary wheel
-            - a certificate file (CRT), proving authority
+            - a binary wheel (which is treated, for now, as a zip anyway)
 
         This tool simply shells out to openssl as needed to produce the signature.
-        """)
+        """,
+        )
 
         parser.add_argument("--src", help="Package source root folder.")
         parser.add_argument("--pkg", help="Package file path (wheel, for example)")
         parser.add_argument("--key", help="Openssl private key file", required=True)
         parser.add_argument("--crt", help="Openssl certificate file", required=True)
-        parser.add_argument("--openssl", help="Location of openssl binary", default=which("openssl"))
-        parser.add_argument("--self-signed", help="Allow a self-signed cert", action="store_true")
+        parser.add_argument(
+            "--openssl", help="Location of openssl binary", default=which("openssl")
+        )
+        parser.add_argument(
+            "--self-signed", help="Allow a self-signed cert", action="store_true"
+        )
         args = parser.parse_args(argv)
         if not args.src and not args.pkg:
             raise ValueError("Nothing to do: must specify --src or --pkg")
         return args
 
     def run_setup(self):
-        from distutils.core import run_setup
+        """Given a src directory, run the setup.py command within it."""
         wd = os.getcwd()
         try:
             os.chdir(os.path.dirname(self.src))
-            dist = run_setup(self.setup_path, script_args=["bdist_wheel"], stop_after='run')
-            for typ, ver, path in getattr(dist, "dist_files"):
+            dist = run_setup(
+                self.setup_path, script_args=["bdist_wheel"], stop_after="run"
+            )
+            for typ, _, path in getattr(dist, "dist_files"):
                 if typ == "bdist_wheel":
                     self.pkg = os.path.abspath(path)
                     return
@@ -75,12 +103,16 @@ class Packager:
             os.chdir(wd)
 
     def has_setup(self):
+        """True if the setup.py file exists."""
         return os.path.exists(self.setup_path)
 
     def make_setup(self):
+        """Make a fake setup.py.  This is probably a bad idea."""
         self.made_setup = True
         with open(self.setup_path, "w") as f:
-            f.write(textwrap.dedent("""
+            f.write(
+                textwrap.dedent(
+                    """
         from setuptools import setup
         setup(
             name="{plug_name}",
@@ -89,17 +121,23 @@ class Packager:
             packages=["{plug_name}"],
             setup_requires=["wheel"],
         )
-            """.format(src=self.src, plug_name=os.path.basename(self.src))))
+            """.format(
+                        plug_name=os.path.basename(self.src)
+                    )
+                )
+            )
 
     def remove_setup(self):
         os.remove(self.setup_path)
 
     def openssl(self, cmd, **kws) -> subprocess.CompletedProcess:
+        """Shell openssl, and log that you did so."""
         print("+ openssl", " ".join(cmd), file=sys.stderr)
         cmd = [self.openssl_path] + cmd
-        return subprocess.run(cmd, **kws)
+        return subprocess.run(cmd, **kws)  # pylint: disable=subprocess-run-check
 
     def sign_package(self):
+        """Shell openssl, to sign a package given a crt and a privkey."""
         key = self.key
         crt = self.crt
         pkg = self.pkg
@@ -110,18 +148,19 @@ class Packager:
 
     @staticmethod
     def verify_certificate(crt):
-        from certvalidator import CertificateValidator
-        with open(crt, 'rb') as f:
+        """Validate a cert against system root certs."""
+        with open(crt, "rb") as f:
             end_entity_cert = f.read()
         validator = CertificateValidator(end_entity_cert)
-        validator.validate_usage({'digital_signature'})
+        validator.validate_usage({"digital_signature"})
 
     def zip_package(self):
+        """Stuff the sig, wheel and cert into an ".apkg" file."""
         crt = self.crt
         pkg = self.pkg
         sig = pkg + ".sig"
         final = pkg + ".apkg"
-        with ZipFile(final, 'w') as myzip:
+        with ZipFile(final, "w") as myzip:
             myzip.write(pkg, arcname=os.path.basename(pkg))
             myzip.write(sig, arcname=os.path.basename(sig))
             myzip.write(crt, arcname="cert")
@@ -130,27 +169,30 @@ class Packager:
 
     @classmethod
     def unpack_plugin(cls, path, dest_dir, self_signed=False):
-        with ZipFile(path) as zip:
+        """Given an .apkg path, validate it and unpack to dest_dir."""
+        with ZipFile(path) as zzz:
             ent: ZipInfo
             wheels: List[ZipInfo] = []
-            for ent in zip.infolist():
+            for ent in zzz.infolist():
                 if ent.filename.endswith(".whl"):
                     wheels += [ent]
 
             tmpdir = tempfile.mkdtemp("-apkg")
             try:
-                crt = zip.getinfo("cert")
-                crt = zip.extract(crt, tmpdir)
+                crt = zzz.getinfo("cert")
+                crt = zzz.extract(crt, tmpdir)
 
                 if not self_signed:
                     cls.verify_certificate(crt)
 
                 for whl in wheels:
                     sig = whl.filename + ".sig"
-                    whl = zip.extract(whl, tmpdir)
-                    sig = zip.extract(sig, tmpdir)
+                    whl = zzz.extract(whl, tmpdir)
+                    sig = zzz.extract(sig, tmpdir)
                     cls.verify_signature(crt, whl, sig)
 
+                # all checks out?  unpack
+                for whl in wheels:
                     with ZipFile(whl) as wzip:
                         wzip.extractall(dest_dir)
             finally:
@@ -158,20 +200,21 @@ class Packager:
 
     @staticmethod
     def verify_signature(crt, whl, sig):
-        from oscrypto.asymmetric import load_certificate, rsa_pkcs1v15_verify
-
+        """Given 3 files, verify the cert has signed the wheel to produce sig."""
         cert_obj = load_certificate(crt)
 
         # Load the payload contents and the signature.
-        with open(whl, 'rb') as f:
+        with open(whl, "rb") as f:
             payload_contents = f.read()
 
-        with open(sig, 'rb') as f:
+        with open(sig, "rb") as f:
             signature = f.read()
 
         rsa_pkcs1v15_verify(cert_obj, signature, payload_contents, "sha256")
 
+
 def main():
+    """Main entry point."""
     try:
         p = Packager.from_args(sys.argv[1:])
 
