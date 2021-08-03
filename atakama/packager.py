@@ -117,8 +117,8 @@ class Packager:
         final = pkg + ".apkg"
         with ZipFile(final, 'w') as myzip:
             myzip.write(pkg)
-            myzip.write(crt)
             myzip.write(sig)
+            myzip.write(crt, arcname="cert")
         print("wrote package", final, file=sys.stderr)
         return final
 
