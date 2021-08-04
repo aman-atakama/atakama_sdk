@@ -93,14 +93,12 @@ class Packager:
         try:
             os.chdir(os.path.dirname(self.src))
             print("running: ", os.getcwd(), self.setup_path, file=sys.stderr)
-            dist = run_setup(
-                self.setup_path, script_args=["bdist_wheel"]
-            )
+            dist = run_setup(self.setup_path, script_args=["bdist_wheel"])
             for typ, _, path in getattr(dist, "dist_files"):
                 if typ == "bdist_wheel":
                     self.pkg = os.path.abspath(path)
                     return
-            assert False, "Expected package not created" # pragma: no cover
+            assert False, "Expected package not created"  # pragma: no cover
         finally:
             os.chdir(wd)
 
