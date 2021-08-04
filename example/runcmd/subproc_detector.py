@@ -8,6 +8,10 @@ class SubprocDetector(DetectorPlugin):
         self.cmd = args["cmd"]
         assert "{path}" in self.cmd
 
+    @staticmethod
+    def name():
+        return "subprocess-detector"
+
     def needs_encryption(self, path):
         cmd = self.cmd.replace("{path}", path)
         ret = subprocess.run(cmd, shell=True)

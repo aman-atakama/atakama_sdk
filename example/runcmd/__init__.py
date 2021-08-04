@@ -1,1 +1,1 @@
-from .subproc_detector import SubProcDetector
+from .subproc_detector import SubprocDetector

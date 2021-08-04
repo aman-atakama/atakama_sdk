@@ -32,8 +32,9 @@ class Packager:
         self.crt = crt
         self.self_signed = self_signed
 
-        self.setup_path = src and os.path.join(self.src, "setup.py")
+        self.setup_path = src and os.path.abspath(os.path.join(self.src, "setup.py"))
         self.openssl_path = openssl or which("openssl")
+        self.openssl_path = self.openssl_path and os.path.abspath(self.openssl_path)
         self.made_setup = False
 
     @classmethod
@@ -86,19 +87,20 @@ class Packager:
             raise ValueError("Nothing to do: must specify --src or --pkg")
         return args
 
-    def run_setup(self):
+    def run_setup(self) -> None:
         """Given a src directory, run the setup.py command within it."""
         wd = os.getcwd()
         try:
             os.chdir(os.path.dirname(self.src))
+            print("running: ", os.getcwd(), self.setup_path, file=sys.stderr)
             dist = run_setup(
-                self.setup_path, script_args=["bdist_wheel"], stop_after="run"
+                self.setup_path, script_args=["bdist_wheel"]
             )
             for typ, _, path in getattr(dist, "dist_files"):
                 if typ == "bdist_wheel":
                     self.pkg = os.path.abspath(path)
                     return
-            raise ValueError("Expected package not created")
+            assert False, "Expected package not created" # pragma: no cover
         finally:
             os.chdir(wd)
 
@@ -108,6 +110,7 @@ class Packager:
 
     def make_setup(self):
         """Make a fake setup.py.  This is probably a bad idea."""
+        print("make setup:", self.setup_path, file=sys.stderr)
         self.made_setup = True
         with open(self.setup_path, "w") as f:
             f.write(
@@ -164,7 +167,7 @@ class Packager:
             myzip.write(pkg, arcname=os.path.basename(pkg))
             myzip.write(sig, arcname=os.path.basename(sig))
             myzip.write(crt, arcname="cert")
-        print("wrote package", final, file=sys.stderr)
+        print("wrote package:", final, file=sys.stderr)
         return final
 
     @classmethod
@@ -185,14 +188,16 @@ class Packager:
                 if not self_signed:
                     cls.verify_certificate(crt)
 
+                unpacked_wheels = []
                 for whl in wheels:
                     sig = whl.filename + ".sig"
                     whl = zzz.extract(whl, tmpdir)
                     sig = zzz.extract(sig, tmpdir)
                     cls.verify_signature(crt, whl, sig)
+                    unpacked_wheels.append(whl)
 
                 # all checks out?  unpack
-                for whl in wheels:
+                for whl in unpacked_wheels:
                     with ZipFile(whl) as wzip:
                         wzip.extractall(dest_dir)
             finally:
@@ -239,5 +244,5 @@ def main():
         sys.exit(1)
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     main()
