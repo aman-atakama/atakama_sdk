@@ -9,8 +9,12 @@ from shutil import which
 from typing import List
 from zipfile import ZipFile, ZipInfo
 from distutils.core import run_setup
+
+import certvalidator
 from certvalidator import CertificateValidator, ValidationContext
 from oscrypto.asymmetric import load_certificate, rsa_pkcs1v15_verify
+
+errors = certvalidator.errors
 
 
 class Packager:
@@ -157,7 +161,7 @@ class Packager:
         # as opposed to *packages* which we actually *do* want to ensure compat with
         with open(crt, "rb") as f:
             end_entity_cert = f.read()
-        context = ValidationContext(weak_hash_algos=["md2", "md5"])
+        context = ValidationContext(weak_hash_algos={"md2", "md5"})
         validator = CertificateValidator(end_entity_cert, validation_context=context)
         validator.validate_usage({"digital_signature"})
 

@@ -4,8 +4,15 @@ from unittest.mock import patch
 
 import pytest
 
-from atakama import DetectorPlugin, FileChangedPlugin, Plugin, PluginVersionMissingError, SDK_VERSION_NAME
+from atakama import (
+    DetectorPlugin,
+    FileChangedPlugin,
+    Plugin,
+    PluginVersionMissingError,
+    SDK_VERSION_NAME,
+)
 from atakama.plugin_base import is_abstract
+
 
 def test_simple_detector():
     # we just test that we can write a class to spec
@@ -25,8 +32,10 @@ def test_simple_detector():
 
     assert "yo" in Plugin.all_names()
 
+
 def test_is_abstract():
     assert is_abstract(DetectorPlugin)
+
 
 def test_simple_fchange():
     # we just test that we can write a class to spec
@@ -51,8 +60,10 @@ def test_get_version_from_mod():
     with patch.dict(globals(), {SDK_VERSION_NAME: Plugin.CURRENT_SDK_VERSION}):
         assert ExamplePlugin.get_sdk_version() == Plugin.CURRENT_SDK_VERSION
 
+
 def test_get_version_from_sub():
     from tests.package import InvalidPlugin
+
     assert InvalidPlugin.get_sdk_version() == Plugin.CURRENT_SDK_VERSION
 
 
