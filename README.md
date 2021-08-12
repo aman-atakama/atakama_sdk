@@ -49,6 +49,6 @@ Detector plugins run inside a protected namespace within Atakama.   Not all impo
 
  - Python code is version 3
  - All `__builtins__` are guaranteed to be available
- - In particalar, `subprocess`, `sys`, `requests`, `os`, `zipfile` and `atakama` are explicitly available.
+ - In particular, `subprocess`, `sys`, `requests`, `os`, `zipfile` and `atakama` are explicitly available.
  - If you're concerned about specific package versions and other dependencies, please package your plugin as a subprocess call (or DLL) with its own deps included
  - Atakama will endeavor to update the `ATAKAMA_SDK_VERSION` if we ship libraries that have major version changes, or backward breaking python-version changes
