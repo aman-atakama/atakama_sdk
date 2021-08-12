@@ -72,6 +72,14 @@ class Plugin(abc.ABC):
         """
 
     @classmethod
+    def type(cls) -> str:
+        """Return the type of plugin that this is.
+
+        Used for display purposes only, default is the super class name.
+        """
+        return cls.__bases__[0].__name__
+
+    @classmethod
     def get_by_name(cls, name: str) -> Type[T]:
         """Return a plugin based on the name."""
         return cls._all_plugins_by_name[name]
@@ -94,6 +102,11 @@ class Plugin(abc.ABC):
         if not version:
             raise PluginVersionMissingError("no version for %s" % cls.__name__)
         return version
+
+    @classmethod
+    def all_names(cls):
+        """Get a list of all plugin names."""
+        return list(cls._all_plugins_by_name)
 
 
 class DetectorPlugin(Plugin):

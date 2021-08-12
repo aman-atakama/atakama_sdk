@@ -5,7 +5,7 @@ from unittest.mock import patch
 import pytest
 
 from atakama import DetectorPlugin, FileChangedPlugin, Plugin, PluginVersionMissingError, SDK_VERSION_NAME
-
+from atakama.plugin_base import is_abstract
 
 def test_simple_detector():
     # we just test that we can write a class to spec
@@ -21,7 +21,12 @@ def test_simple_detector():
 
     ExamplePlugin({"arg": 1})
 
+    assert ExamplePlugin.type() == "DetectorPlugin"
 
+    assert "yo" in Plugin.all_names()
+
+def test_is_abstract():
+    assert is_abstract(DetectorPlugin)
 
 def test_simple_fchange():
     # we just test that we can write a class to spec

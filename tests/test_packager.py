@@ -45,7 +45,7 @@ def test_package_main(request, self_signed_cert, tmp_path):
     sys.argv += ["--self-signed"]
     main()
     assert dist_dir.is_dir()
-    (final, ) = [file for file in dist_dir.iterdir() if file.suffix == ".apkg"]
+    final, = [file for file in dist_dir.iterdir() if file.suffix == ".apkg" and "runcmd" in str(file)]
 
     Packager.unpack_plugin(final, tmp_path, self_signed=True)
 
