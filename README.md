@@ -3,11 +3,11 @@
 
 ## Overview
 
-This is a library for programmatically interacting and enhancing the Atkamama encrypted file system.
+This is a library for programmatically interacting and enhancing the Atakama encrypted file system.
 
 However, the best way to interact with Atakama is to use the filesystem itself.
 
-*It is not necessary to use this SDK for most development efforts, it is provided solely for effenciency and convenience.*
+*It is not necessary to use this SDK for most development efforts, it is provided solely for efficiency and convenience.*
 
 ### For example:
 
@@ -20,15 +20,14 @@ Using the atakama command-line or SDK would not be recommended in this case.
 
 ## Plugin System:
 
-Atakama supports plugins.   This is largely done so that we can have multiple release cycles for 3rd party vendor integrations.
+Atakama supports plugins. This is largely done so that we can have multiple release cycles for 3rd party vendor integrations.
 
-### Dectector Plugins:
+### Detector Plugins:
 
-Atakama runs a file monitoring system.  This system will autoamtically-encrypt files as files are modified. For efficiency,
-expecially on large systems, it may be desirable to alter the rules used to detect and encrypt files.
+Atakama runs a file monitoring system. This system will automatically-encrypt files as files are modified. For efficiency,
+especially on large systems, it may be desirable to alter the rules used to detect and encrypt files.
 
 #### Example of a detector plugin:
-
 
 This plugin will cause any file with the word "secret" in the name to be encrypted.
 

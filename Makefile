@@ -1,7 +1,7 @@
 DELETE_ON_ERROR:
 
 env:
-	python -mvirtualenv env
+	python -m virtualenv env
 
 requirements:
 	pip install -r requirements.txt
