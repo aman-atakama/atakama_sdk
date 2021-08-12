@@ -19,7 +19,7 @@ def self_signed_cert(tmp_path_factory):
     p = Packager()
     p.openssl(["req", "-x509", "-sha256", "-nodes", "-days", "365", "-newkey", "rsa:2048", "-keyout", priv, "-out", crt,
                "-subj", "/C=X /ST=X /L= /O= /OU= /CN=X"
-               ], check=True)
+               ])
     yield priv, crt
     Path(priv).unlink()
     Path(crt).unlink()

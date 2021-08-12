@@ -9,7 +9,7 @@ from shutil import which
 from typing import List
 from zipfile import ZipFile, ZipInfo
 from distutils.core import run_setup
-from certvalidator import CertificateValidator
+from certvalidator import CertificateValidator, ValidationContext
 from oscrypto.asymmetric import load_certificate, rsa_pkcs1v15_verify
 
 
@@ -131,10 +131,11 @@ class Packager:
     def remove_setup(self):
         os.remove(self.setup_path)
 
-    def openssl(self, cmd, **kws) -> subprocess.CompletedProcess:
+    def openssl(self, cmd, check=True, **kws) -> subprocess.CompletedProcess:
         """Shell openssl, and log that you did so."""
         print("+ openssl", " ".join(cmd), file=sys.stderr)
         cmd = [self.openssl_path] + cmd
+        kws["check"] = check
         return subprocess.run(cmd, **kws)  # pylint: disable=subprocess-run-check
 
     def sign_package(self):
@@ -144,15 +145,20 @@ class Packager:
         pkg = self.pkg
 
         sig = pkg + ".sig"
-        self.openssl(["dgst", "-sha256", "-sign", key, "-out", sig, pkg], check=True)
+        self.openssl(["dgst", "-sha256", "-sign", key, "-out", sig, pkg])
         self.verify_signature(crt, pkg, sig)
 
     @staticmethod
     def verify_certificate(crt):
         """Validate a cert against system root certs."""
+
+        # handles revocation
+        # we do not want *users* of this lib to need openssl in the path
+        # as opposed to *packages* which we actually *do* want to ensure compat with
         with open(crt, "rb") as f:
             end_entity_cert = f.read()
-        validator = CertificateValidator(end_entity_cert)
+        context = ValidationContext(weak_hash_algos=["md2", "md5"])
+        validator = CertificateValidator(end_entity_cert, validation_context=context)
         validator.validate_usage({"digital_signature"})
 
     def zip_package(self):
@@ -165,7 +171,7 @@ class Packager:
             myzip.write(pkg, arcname=os.path.basename(pkg))
             myzip.write(sig, arcname=os.path.basename(sig))
             myzip.write(crt, arcname="cert")
-        print("wrote package:", final, file=sys.stderr)
+        print(final, file=sys.stdout)
         return final
 
     @classmethod
@@ -176,7 +182,7 @@ class Packager:
             wheels: List[ZipInfo] = []
             for ent in zzz.infolist():
                 if ent.filename.endswith(".whl"):
-                    wheels += [ent]
+                    wheels.append(ent)
 
             tmpdir = tempfile.mkdtemp("-apkg")
             try:
@@ -238,7 +244,7 @@ def main():
             p.zip_package()
 
     except subprocess.CalledProcessError as ex:
-        print(ex)
+        print(ex, file=sys.stderr)
         sys.exit(1)
 
 
