@@ -133,6 +133,14 @@ class FileChangedPlugin(Plugin):
         """
 
 
+class StartupPlugin(Plugin):
+    def run_after_start(self) -> bool:
+        """Runs once at product start, after gui & filesystem are running."""
+
+    def run_before_start(self) -> bool:
+        """Runs once before product start."""
+
+
 __all__ = [
     "Plugin",
     "DetectorPlugin",
