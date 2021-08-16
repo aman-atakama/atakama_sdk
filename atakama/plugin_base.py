@@ -150,7 +150,6 @@ class StartupPlugin(Plugin):
         """Runs at system shutdown, exceptions are logged but ignored."""
 
 
-
 __all__ = [
     "Plugin",
     "DetectorPlugin",
