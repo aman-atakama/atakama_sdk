@@ -135,10 +135,20 @@ class FileChangedPlugin(Plugin):
 
 class StartupPlugin(Plugin):
     def run_after_start(self) -> bool:
-        """Runs once at product start, after gui & filesystem are running."""
+        """Runs once at product start, after gui & filesystem are running.
+
+        Exceptions prevent startup and may induce a dialog/alert.
+        """
 
     def run_before_start(self) -> bool:
-        """Runs once before product start."""
+        """Runs once before product start, can be uses to modify the system before startup.
+
+        Exceptions cause the system to shut down, and may cause a dialog/alert.
+        """
+
+    def shutdown(self):
+        """Runs at system shutdown, exceptions are logged but ignored."""
+
 
 
 __all__ = [
