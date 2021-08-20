@@ -134,6 +134,8 @@ class FileChangedPlugin(Plugin):
 
 
 class StartupPlugin(Plugin):
+    """Plugin for launching things at start and at shutdown."""
+
     def run_after_start(self) -> bool:
         """Runs once at product start, after gui & filesystem are running.
 
