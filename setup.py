@@ -14,12 +14,12 @@ def long_description():
 
 setup(
     name="atakama",
-    version="1.0.5",
+    version="1.2.2",
     description="Atakama sdk",
     packages=["atakama"],
     long_description=long_description(),
     long_description_content_type="text/markdown",
     setup_requires=["wheel"],
-    install_requires=[],
-    entry_points={},
+    install_requires=["oscrypto", "certvalidator"],
+    entry_points={"console_scripts": "atakama-pkg=atakama.packager:main"},
 )

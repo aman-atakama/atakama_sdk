@@ -72,6 +72,14 @@ class Plugin(abc.ABC):
         """
 
     @classmethod
+    def type(cls) -> str:
+        """Return the type of plugin that this is.
+
+        Used for display purposes only, default is the super class name.
+        """
+        return cls.__bases__[0].__name__
+
+    @classmethod
     def get_by_name(cls, name: str) -> Type[T]:
         """Return a plugin based on the name."""
         return cls._all_plugins_by_name[name]
@@ -94,6 +102,11 @@ class Plugin(abc.ABC):
         if not version:
             raise PluginVersionMissingError("no version for %s" % cls.__name__)
         return version
+
+    @classmethod
+    def all_names(cls):
+        """Get a list of all plugin names."""
+        return list(cls._all_plugins_by_name)
 
 
 class DetectorPlugin(Plugin):
@@ -118,6 +131,25 @@ class FileChangedPlugin(Plugin):
 
         Typically used for document (re)classification.
         """
+
+
+class StartupPlugin(Plugin):
+    """Plugin for launching things at start and at shutdown."""
+
+    def run_after_start(self) -> bool:
+        """Runs once at product start, after gui & filesystem are running.
+
+        Exceptions prevent startup and may induce a dialog/alert.
+        """
+
+    def run_before_start(self) -> bool:
+        """Runs once before product start, can be uses to modify the system before startup.
+
+        Exceptions cause the system to shut down, and may cause a dialog/alert.
+        """
+
+    def shutdown(self):
+        """Runs at system shutdown, exceptions are logged but ignored."""
 
 
 __all__ = [
