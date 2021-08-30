@@ -11,7 +11,7 @@ from atakama import (
     PluginVersionMissingError,
     SDK_VERSION_NAME,
 )
-from atakama.plugin_base import is_abstract
+from atakama.plugin_base import is_abstract, StartupPlugin
 
 
 def test_simple_detector():
@@ -31,6 +31,22 @@ def test_simple_detector():
     assert ExamplePlugin.type() == "DetectorPlugin"
 
     assert "yo" in Plugin.all_names()
+
+
+def test_simple_startup_plugin():
+    # we just test that we can write a class to spec
+    class ExampleStartupPlugin(StartupPlugin):
+        @staticmethod
+        def name():
+            return "simple-startup-plugin"
+
+    assert Plugin.get_by_name("simple-startup-plugin") is ExampleStartupPlugin
+
+    ExampleStartupPlugin({"arg": 1})
+
+    assert ExampleStartupPlugin.type() == "StartupPlugin"
+
+    assert "simple-startup-plugin" in Plugin.all_names()
 
 
 def test_is_abstract():
