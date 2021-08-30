@@ -114,7 +114,7 @@ class Packager:
         """Make a fake setup.py.  This is probably a bad idea."""
         print("make setup:", self.setup_path, file=sys.stderr)
         self.made_setup = True
-        with open(self.setup_path, "w") as f:
+        with open(self.setup_path, "w", encoding="utf8") as f:
             f.write(
                 textwrap.dedent(
                     """
