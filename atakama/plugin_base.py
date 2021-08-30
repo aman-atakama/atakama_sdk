@@ -156,6 +156,7 @@ __all__ = [
     "Plugin",
     "DetectorPlugin",
     "FileChangedPlugin",
+    "StartupPlugin",
     "SDK_VERSION_NAME",
     "PluginVersionMissingError",
 ]
