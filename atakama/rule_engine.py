@@ -114,7 +114,7 @@ class RuleSet(List[RulePlugin]):
     """A list of rules, can reply True, False, or None to an ApprovalRequest"""
 
     def approve_request(self, request: ApprovalRequest) -> bool:
-        for rule in self:
+        for rule in self:  # pylint: disable=not-an-iterable
             try:
                 res = rule.approve_request(request)
                 if res is None:
@@ -141,7 +141,7 @@ class RuleTree(List[RuleSet]):
     """
 
     def approve_request(self, request: ApprovalRequest) -> bool:
-        for rset in self:
+        for rset in self:  # pylint: disable=not-an-iterable
             res = rset.approve_request(request)
             if res:
                 return True
