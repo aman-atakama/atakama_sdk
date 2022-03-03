@@ -36,7 +36,7 @@ class ProfileInfo:
 @dataclass
 class MetaInfo:
     meta: str
-    """Typically the mount point sub-path of a file."""
+    """Typically the full mount-path of a file."""
     complete: bool
     """Whether the meta is complete (fully verified) or partial (missing components)"""
 
