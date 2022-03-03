@@ -3,9 +3,13 @@ import json
 import yaml
 
 from atakama import (
-    RulePlugin, RuleSet, ApprovalRequest, RequestType, ProfileInfo, RuleEngine, RuleTree
+    RulePlugin, RuleSet, ApprovalRequest, RequestType, ProfileInfo, RuleEngine, RuleTree, MetaInfo
 )
 
+
+class TestMetaInfo(MetaInfo):
+    def __init__(self, meta="/meta", complete=True):
+        super().__init__(meta=meta, complete=complete)
 
 class TestProfileInfo(ProfileInfo):
     def __init__(self, profile_id=b'pid', profile_words=None):
@@ -14,7 +18,9 @@ class TestProfileInfo(ProfileInfo):
 
 
 class TestApprovalRequest(ApprovalRequest):
-    def __init__(self, request_type = RequestType.DECRYPT, device_id = b'did', profile=TestProfileInfo(), auth_meta = "/meta"):
+    def __init__(self, request_type=RequestType.DECRYPT, device_id=b'did', profile=TestProfileInfo(),
+                 auth_meta=None):
+        auth_meta = auth_meta or [TestMetaInfo()]
         super().__init__(request_type=request_type, device_id=device_id, profile=profile, auth_meta=auth_meta)
 
 def test_simple_rule():
@@ -70,17 +76,17 @@ def test_more_complex(tmp_path):
 
         def approve_request(self, request):
             did = bytes.fromhex(self.args.get("device_id", ""))
-            meta = self.args.get("meta", "")
-            return request.device_id == did and (not meta or request.auth_meta == meta)
+            meta = self.args.get("path", "")
+            return request.device_id == did and (not meta or request.auth_meta[0].meta == meta)
 
     rule_yml = tmp_path / "rules.yml"
     info = {
         RequestType.DECRYPT.value: [
-            [{"plugin": "complex", "device_id": b'okwmeta'.hex()}, {"plugin": "complex", "meta": "/meta"}],
+            [{"plugin": "complex", "device_id": b'okwmeta'.hex()}, {"plugin": "complex", "path": "/meta"}],
             [{"plugin": "complex", "device_id": b'okany'.hex()}]
         ],
         RequestType.SEARCH.value: [
-            [{"plugin": "complex", "device_id": b'okwmeta'.hex()}, {"plugin": "complex", "meta": "/search"}],
+            [{"plugin": "complex", "device_id": b'okwmeta'.hex()}, {"plugin": "complex", "path": "/search"}],
             [{"plugin": "complex", "device_id": b'okany'.hex()}]
         ]
     }
@@ -91,10 +97,10 @@ def test_more_complex(tmp_path):
     rs = RuleEngine.from_yml_file(rule_yml)
 
     assert rs.approve_request(TestApprovalRequest(device_id=b'okany'))
-    assert rs.approve_request(TestApprovalRequest(device_id=b'okwmeta', auth_meta="/meta"))
-    assert rs.approve_request(TestApprovalRequest(device_id=b'okwmeta', auth_meta="/search"))
-    assert not rs.approve_request(TestApprovalRequest(device_id=b'notok', auth_meta="/search"))
-    assert not rs.approve_request(TestApprovalRequest(device_id=b'notok', auth_meta="/meta"))
+    assert rs.approve_request(TestApprovalRequest(device_id=b'okwmeta', auth_meta=[TestMetaInfo("/meta")]))
+    assert rs.approve_request(TestApprovalRequest(device_id=b'okwmeta', auth_meta=[TestMetaInfo("/search")]))
+    assert not rs.approve_request(TestApprovalRequest(device_id=b'notok', auth_meta=[TestMetaInfo("/search")]))
+    assert not rs.approve_request(TestApprovalRequest(device_id=b'notok', auth_meta=[TestMetaInfo("/meta")]))
 
 
 def test_clear_quota():

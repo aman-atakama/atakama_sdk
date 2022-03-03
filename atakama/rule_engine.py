@@ -14,10 +14,15 @@ if TYPE_CHECKING:
 
 log = logging.getLogger(__name__)
 
+
 class RequestType(Enum):
     DECRYPT = "decrypt"
     SEARCH = "search"
-    CREATE_NEW_PROFILE = "create_profile"
+    CREATE_PROFILE = "create_profile"
+    ACTIVATE_LOCATION = "activate_location"
+    CREATE_LOCATION = "create_location"
+    RENAME_FILE = "rename_file"
+    SECURE_EXPORT = "secure_export"
 
 
 @dataclass
@@ -29,6 +34,14 @@ class ProfileInfo:
 
 
 @dataclass
+class MetaInfo:
+    meta: str
+    """Typically the mount point sub-path of a file."""
+    complete: bool
+    """Whether the meta is complete (fully verified) or partial (missing components)"""
+
+
+@dataclass
 class ApprovalRequest:
     request_type: RequestType
     """Request type"""
@@ -36,17 +49,28 @@ class ApprovalRequest:
     """Requesting device uuid"""
     profile: ProfileInfo
     """"""
-    auth_meta: bytes
+    auth_meta: List[MetaInfo]
     """Authenticated metadata associated with the encrypted data.   Typically a path to a file."""
 
 
 class RulePlugin(Plugin):
+    """
+    Base class for key server approval rule handlers.
+
+    When a key server receives a request, rules are consulted for approval.
+
+    Each rule receives its configuration from the policy file,
+    not the atakama config, like other plugins.
+    """
+
     @abc.abstractmethod
     def approve_request(self, request: ApprovalRequest) -> bool:
-        """Return True if the request to decrypt a file will be authorized.
-           Return False if the request is to be denied.
-           Raise None if the request type is unknown or invalid.
-           Exceptions and None are logged, and considered False.
+        """
+        Return True if the request to decrypt a file will be authorized.
+
+        Return False if the request is to be denied.
+        Raise None if the request type is unknown or invalid.
+        Exceptions and None are logged, and considered False.
 
         This is called any time:
             a decryption agent wishes to decrypt a file.
@@ -85,6 +109,7 @@ class RulePlugin(Plugin):
         assert isinstance(p, RulePlugin), "Rule plugins must derive from RulePlugin"
         return p
 
+
 class RuleSet(List[RulePlugin]):
     """A list of rules, can reply True, False, or None to an ApprovalRequest"""
 
@@ -107,15 +132,13 @@ class RuleSet(List[RulePlugin]):
             lst.append(RulePlugin.from_dict(ent))
         return RuleSet(lst)
 
+
 class RuleTree(List[RuleSet]):
     """A list of RuleSet objects.
 
     Return True if any RuleSet returns True.
     Returns False if all RuleSets return False.
     """
-
-    def __init__(self, rsets):
-        super().__init__(rsets)
 
     def approve_request(self, request: ApprovalRequest) -> bool:
         for rset in self:
@@ -130,7 +153,8 @@ class RuleTree(List[RuleSet]):
         for ent in ruledefs:
             rset = RuleSet.from_list(ent)
             ini.append(rset)
-        return cls(ini)
+        return RuleTree(ini)
+
 
 class RuleEngine:
     """A collection of RuleTree objects for each possible request_type.
@@ -157,12 +181,12 @@ class RuleEngine:
 
     @classmethod
     def from_dict(cls, info: Dict[str, List[List[dict]]]) -> "RuleEngine":
-        map = {}
+        rule_map = {}
         for rtype, treedef in info.items():
             rtype = RequestType(rtype)
             tree = RuleTree.from_list(treedef)
-            map[rtype] = tree
-        return cls(map)
+            rule_map[rtype] = tree
+        return cls(rule_map)
 
     def clear_quota(self, profile: ProfileInfo):
         for rt in self.map.values():
