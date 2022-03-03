@@ -4,7 +4,8 @@ env:
 	python -m virtualenv env
 
 requirements:
-	pip install -r requirements.txt
+	# use isolated so devs don't accidentally check in odd deps
+	pip install --isolated -r requirements.txt
 
 lint:
 	python -m pylint atakama
