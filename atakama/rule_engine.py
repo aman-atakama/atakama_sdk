@@ -2,7 +2,7 @@
 import abc
 from dataclasses import dataclass
 from enum import Enum
-from typing import List, Dict, Union, TYPE_CHECKING
+from typing import List, Dict, Union, TYPE_CHECKING, Optional
 import logging
 
 import yaml
@@ -21,7 +21,7 @@ class RequestType(Enum):
     CREATE_PROFILE = "create_profile"
     ACTIVATE_LOCATION = "activate_location"
     CREATE_LOCATION = "create_location"
-    RENAME_FILE = "rename_file"
+    RENAME_FILE = "rename"
     SECURE_EXPORT = "secure_export"
 
 
@@ -64,7 +64,7 @@ class RulePlugin(Plugin):
     """
 
     @abc.abstractmethod
-    def approve_request(self, request: ApprovalRequest) -> bool:
+    def approve_request(self, request: ApprovalRequest) -> Optional[bool]:
         """
         Return True if the request to decrypt a file will be authorized.
 
@@ -75,9 +75,9 @@ class RulePlugin(Plugin):
         This is called any time:
             a decryption agent wishes to decrypt a file.
             a decryption agent wishes to search a file.
-            a decryption agent wishes to create a new multifactor profile.
+            a decryption agent wishes to perform other multifactor request types.
 
-        See the RuleRequest class for more information
+        See the RequestType class for more information.
         """
 
     def check_quota(self, profile: ProfileInfo) -> bool:
@@ -167,7 +167,7 @@ class RuleEngine:
     def __init__(self, rule_map: Dict[RequestType, RuleTree]):
         self.map: Dict[RequestType, RuleTree] = rule_map
 
-    def approve_request(self, request: ApprovalRequest) -> Union[bool, None]:
+    def approve_request(self, request: ApprovalRequest) -> Optional[bool]:
         tree = self.map.get(request.request_type, None)
         if tree is None:
             return None
