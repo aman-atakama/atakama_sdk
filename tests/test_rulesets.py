@@ -40,6 +40,26 @@ def test_simple_rule():
     assert rs.approve_request(TestApprovalRequest(device_id=b'3'))
     assert not rs.approve_request(TestApprovalRequest(device_id=b'4'))
 
+def test_errs():
+    # we just test that we can write a class to spec
+    class ExampleRule(RulePlugin):
+        @staticmethod
+        def name():
+            return "example"
+
+        def approve_request(self, request):
+            if request.device_id == b'3':
+                return True
+            if request.device_id == b'b':
+                raise ValueError
+            return None
+
+    rs = RuleSet([ExampleRule({})])
+
+    assert rs.approve_request(TestApprovalRequest(device_id=b'3'))
+    assert rs.approve_request(TestApprovalRequest(device_id=b'4')) is False
+    assert rs.approve_request(TestApprovalRequest(device_id=b'b')) is False
+
 
 def test_simple_loader(tmp_path):
     # noinspection PyUnusedLocal
@@ -131,7 +151,12 @@ def test_clear_quota():
 
     re.clear_quota(TestProfileInfo(profile_id=b'pid1'))
 
-    # pid 1 is clear
+    # other request types are ignored, and don't impact quota
+    assert re.approve_request(TestApprovalRequest(request_type=RequestType.SEARCH, profile=TestProfileInfo(profile_id=b'pid1'))) is None
+    assert re.approve_request(TestApprovalRequest(request_type=RequestType.SEARCH, profile=TestProfileInfo(profile_id=b'pid1'))) is None
+    assert re.approve_request(TestApprovalRequest(request_type=RequestType.SEARCH, profile=TestProfileInfo(profile_id=b'pid1'))) is None
+
+    # pid 1 is still clear
     assert re.approve_request(TestApprovalRequest(profile=TestProfileInfo(profile_id=b'pid1')))
 
     # pid 2 is not
