@@ -78,7 +78,7 @@ def test_simple_loader(tmp_path):
             return False
 
     rule_yml = tmp_path / "rules.yml"
-    info = {RequestType.DECRYPT.value: [[{"plugin": "example_loader", "device_id": b'okdid'.hex()}]]}
+    info = {RequestType.DECRYPT.value: [[{"rule": "example_loader", "device_id": b'okdid'.hex()}]]}
     with rule_yml.open("w") as f:
         yaml.safe_dump(info, f)
 
@@ -105,15 +105,16 @@ def test_more_complex(tmp_path):
     rule_yml = tmp_path / "rules.yml"
     info = {
         RequestType.DECRYPT.value: [
-            [{"plugin": "complex", "device_id": b'okwmeta'.hex()}, {"plugin": "complex", "path": "/meta"}],
-            [{"plugin": "complex", "device_id": b'okany'.hex()}]
+            [{"rule": "complex", "device_id": b'okwmeta'.hex()}, {"rule": "complex", "path": "/meta"}],
+            [{"rule": "complex", "device_id": b'okany'.hex()}]
         ],
         RequestType.SEARCH.value: [
-            [{"plugin": "complex", "device_id": b'okwmeta'.hex()}, {"plugin": "complex", "path": "/search"}],
-            [{"plugin": "complex", "device_id": b'okany'.hex()}]
+            [{"rule": "complex", "device_id": b'okwmeta'.hex()}, {"rule": "complex", "path": "/search"}],
+            [{"rule": "complex", "device_id": b'okany'.hex()}]
         ],
         RequestType.RENAME_FILE.value: {
-            "extends": RequestType.DECRYPT.value
+            "extends": RequestType.DECRYPT.value,
+            "rules": [[{"rule": "complex", "device_id": b'okrename'.hex()}]]
         }
     }
 
@@ -127,6 +128,7 @@ def test_more_complex(tmp_path):
     assert rs.approve_request(TestApprovalRequest(request_type=RequestType.SEARCH, device_id=b'okwmeta', auth_meta=[TestMetaInfo("/search")]))
     assert not rs.approve_request(TestApprovalRequest(device_id=b'okwmeta', auth_meta=[TestMetaInfo("/search")]))
     assert rs.approve_request(TestApprovalRequest(request_type=RequestType.RENAME_FILE, device_id=b'okwmeta', auth_meta=[TestMetaInfo("/meta")]))
+    assert rs.approve_request(TestApprovalRequest(request_type=RequestType.RENAME_FILE, device_id=b'okrename'))
     assert not rs.approve_request(TestApprovalRequest(request_type=RequestType.RENAME_FILE, device_id=b'okwmeta', auth_meta=[TestMetaInfo("/search")]))
     assert not rs.approve_request(TestApprovalRequest(request_type=RequestType.CREATE_PROFILE, device_id=b'okany'))
     assert not rs.approve_request(TestApprovalRequest(device_id=b'notok', auth_meta=[TestMetaInfo("/search")]))

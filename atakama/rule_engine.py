@@ -103,8 +103,8 @@ class RulePlugin(Plugin):
         """
 
         assert type(data) is dict, "Rule entries must be dicts"
-        assert "plugin" in data, "Rule entries must have a plugin name"
-        pname = data.pop("plugin")
+        assert "rule" in data, "Rule entries must have a plugin name"
+        pname = data.pop("rule")
         p = RulePlugin.get_by_name(pname)(data)
         assert isinstance(p, RulePlugin), "Rule plugins must derive from RulePlugin"
         return p
