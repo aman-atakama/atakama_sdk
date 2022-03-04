@@ -97,7 +97,10 @@ def test_more_complex(tmp_path):
         def approve_request(self, request):
             did = bytes.fromhex(self.args.get("device_id", ""))
             meta = self.args.get("path", "")
-            return request.device_id == did and (not meta or request.auth_meta[0].meta == meta)
+            if did:
+                return request.device_id == did
+            if meta:
+                return request.auth_meta[0].meta == meta
 
     rule_yml = tmp_path / "rules.yml"
     info = {
@@ -108,7 +111,10 @@ def test_more_complex(tmp_path):
         RequestType.SEARCH.value: [
             [{"plugin": "complex", "device_id": b'okwmeta'.hex()}, {"plugin": "complex", "path": "/search"}],
             [{"plugin": "complex", "device_id": b'okany'.hex()}]
-        ]
+        ],
+        RequestType.RENAME_FILE.value: {
+            "extends": RequestType.DECRYPT.value
+        }
     }
 
     with rule_yml.open("w") as f:
@@ -118,7 +124,11 @@ def test_more_complex(tmp_path):
 
     assert rs.approve_request(TestApprovalRequest(device_id=b'okany'))
     assert rs.approve_request(TestApprovalRequest(device_id=b'okwmeta', auth_meta=[TestMetaInfo("/meta")]))
-    assert rs.approve_request(TestApprovalRequest(device_id=b'okwmeta', auth_meta=[TestMetaInfo("/search")]))
+    assert rs.approve_request(TestApprovalRequest(request_type=RequestType.SEARCH, device_id=b'okwmeta', auth_meta=[TestMetaInfo("/search")]))
+    assert not rs.approve_request(TestApprovalRequest(device_id=b'okwmeta', auth_meta=[TestMetaInfo("/search")]))
+    assert rs.approve_request(TestApprovalRequest(request_type=RequestType.RENAME_FILE, device_id=b'okwmeta', auth_meta=[TestMetaInfo("/meta")]))
+    assert not rs.approve_request(TestApprovalRequest(request_type=RequestType.RENAME_FILE, device_id=b'okwmeta', auth_meta=[TestMetaInfo("/search")]))
+    assert not rs.approve_request(TestApprovalRequest(request_type=RequestType.CREATE_PROFILE, device_id=b'okany'))
     assert not rs.approve_request(TestApprovalRequest(device_id=b'notok', auth_meta=[TestMetaInfo("/search")]))
     assert not rs.approve_request(TestApprovalRequest(device_id=b'notok', auth_meta=[TestMetaInfo("/meta")]))
 

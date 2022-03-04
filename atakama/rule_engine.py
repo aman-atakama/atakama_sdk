@@ -2,7 +2,7 @@
 import abc
 from dataclasses import dataclass
 from enum import Enum
-from typing import List, Dict, Union, TYPE_CHECKING, Optional
+from typing import List, Dict, Union, TYPE_CHECKING, Optional, Any
 import logging
 
 import yaml
@@ -111,7 +111,12 @@ class RulePlugin(Plugin):
 
 
 class RuleSet(List[RulePlugin]):
-    """A list of rules, can reply True, False, or None to an ApprovalRequest"""
+    """A list of rules, can reply True, False, or None to an ApprovalRequest
+
+    All rules must pass in a ruleset
+
+    An empty ruleset always returns True
+    """
 
     def approve_request(self, request: ApprovalRequest) -> bool:
         for rule in self:  # pylint: disable=not-an-iterable
@@ -119,10 +124,12 @@ class RuleSet(List[RulePlugin]):
                 res = rule.approve_request(request)
                 if res is None:
                     log.error("unknown request type error in rule %s", rule)
-                return bool(res)
+                if not res:
+                    return False
             except Exception as ex:
                 log.error("error in rule %s: %s", rule, repr(ex))
                 return False
+        return True
 
     @classmethod
     def from_list(cls, ruledata: List[dict]) -> "RuleSet":
@@ -136,7 +143,7 @@ class RuleSet(List[RulePlugin]):
 class RuleTree(List[RuleSet]):
     """A list of RuleSet objects.
 
-    Return True if any RuleSet returns True.
+    Return True if *any* RuleSet returns True.
     Returns False if all RuleSets return False.
     """
 
@@ -180,11 +187,18 @@ class RuleEngine:
             return cls.from_dict(info)
 
     @classmethod
-    def from_dict(cls, info: Dict[str, List[List[dict]]]) -> "RuleEngine":
+    def from_dict(cls, info: Dict[str, Union[Dict[str, Any], List[List[dict]]]]) -> "RuleEngine":
         rule_map = {}
         for rtype, treedef in info.items():
             rtype = RequestType(rtype)
-            tree = RuleTree.from_list(treedef)
+            if type(treedef) is dict:
+                ext = treedef.get("extends", None)
+                ext_type = RequestType(ext)
+                treedef = treedef.get("rules", [])
+                tree = RuleTree.from_list(treedef)
+                tree += rule_map[ext_type]
+            else:
+                tree = RuleTree.from_list(treedef)
             rule_map[rtype] = tree
         return cls(rule_map)
 

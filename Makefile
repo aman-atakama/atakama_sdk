@@ -12,7 +12,7 @@ lint:
 	black atakama
 
 test:
-	PYTHONPATH=. pytest --cov atakama -v tests
+	PYTHONPATH=. python -mpytest --cov atakama -v tests
 
 publish:
 	rm -rf dist
