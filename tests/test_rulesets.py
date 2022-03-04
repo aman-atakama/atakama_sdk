@@ -111,11 +111,7 @@ def test_more_complex(tmp_path):
         RequestType.SEARCH.value: [
             [{"rule": "complex", "device_id": b'okwmeta'.hex()}, {"rule": "complex", "path": "/search"}],
             [{"rule": "complex", "device_id": b'okany'.hex()}]
-        ],
-        RequestType.RENAME_FILE.value: {
-            "extends": RequestType.DECRYPT.value,
-            "rules": [[{"rule": "complex", "device_id": b'okrename'.hex()}]]
-        }
+        ]
     }
 
     with rule_yml.open("w") as f:
@@ -127,9 +123,6 @@ def test_more_complex(tmp_path):
     assert rs.approve_request(TestApprovalRequest(device_id=b'okwmeta', auth_meta=[TestMetaInfo("/meta")]))
     assert rs.approve_request(TestApprovalRequest(request_type=RequestType.SEARCH, device_id=b'okwmeta', auth_meta=[TestMetaInfo("/search")]))
     assert not rs.approve_request(TestApprovalRequest(device_id=b'okwmeta', auth_meta=[TestMetaInfo("/search")]))
-    assert rs.approve_request(TestApprovalRequest(request_type=RequestType.RENAME_FILE, device_id=b'okwmeta', auth_meta=[TestMetaInfo("/meta")]))
-    assert rs.approve_request(TestApprovalRequest(request_type=RequestType.RENAME_FILE, device_id=b'okrename'))
-    assert not rs.approve_request(TestApprovalRequest(request_type=RequestType.RENAME_FILE, device_id=b'okwmeta', auth_meta=[TestMetaInfo("/search")]))
     assert not rs.approve_request(TestApprovalRequest(request_type=RequestType.CREATE_PROFILE, device_id=b'okany'))
     assert not rs.approve_request(TestApprovalRequest(device_id=b'notok', auth_meta=[TestMetaInfo("/search")]))
     assert not rs.approve_request(TestApprovalRequest(device_id=b'notok', auth_meta=[TestMetaInfo("/meta")]))

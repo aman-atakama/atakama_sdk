@@ -209,14 +209,7 @@ class RuleEngine:
         rule_map = {}
         for rtype, treedef in info.items():
             rtype = RequestType(rtype)
-            if type(treedef) is dict:
-                ext = treedef.get("extends", None)
-                ext_type = RequestType(ext)
-                treedef = treedef.get("rules", [])
-                tree = RuleTree.from_list(treedef)
-                tree += rule_map[ext_type]
-            else:
-                tree = RuleTree.from_list(treedef)
+            tree = RuleTree.from_list(treedef)
             rule_map[rtype] = tree
         return cls(rule_map)
 
