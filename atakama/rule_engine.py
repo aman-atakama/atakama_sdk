@@ -119,6 +119,7 @@ class RuleSet(List[RulePlugin]):
     """
 
     def approve_request(self, request: ApprovalRequest) -> bool:
+        """Return true if all rules return true."""
         for rule in self:  # pylint: disable=not-an-iterable
             try:
                 res = rule.approve_request(request)
@@ -148,6 +149,7 @@ class RuleTree(List[RuleSet]):
     """
 
     def approve_request(self, request: ApprovalRequest) -> bool:
+        """Return true if any ruleset returns true."""
         for rset in self:  # pylint: disable=not-an-iterable
             res = rset.approve_request(request)
             if res:
@@ -182,12 +184,28 @@ class RuleEngine:
 
     @classmethod
     def from_yml_file(cls, yml: Union["Path", str]):
+        """Build a rule engine from a yml file, see `from_dict` for more info."""
         with open(yml, "r", encoding="utf8") as fh:
             info: dict = yaml.safe_load(fh)
             return cls.from_dict(info)
 
     @classmethod
-    def from_dict(cls, info: Dict[str, Union[Dict[str, Any], List[List[dict]]]]) -> "RuleEngine":
+    def from_dict(
+        cls, info: Dict[str, Union[Dict[str, Any], List[List[dict]]]]
+    ) -> "RuleEngine":
+        """Build a rule engine from a dictionary:
+
+        Example:
+        ```
+        request_type:
+          - - rule: name
+              param: val1
+            - rule: name2
+              param: val2
+          - - rule: name
+              param: val1
+        ```
+        """
         rule_map = {}
         for rtype, treedef in info.items():
             rtype = RequestType(rtype)
