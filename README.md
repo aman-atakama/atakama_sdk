@@ -9,6 +9,8 @@ However, the best way to interact with Atakama is to use the filesystem itself.
 
 *It is not necessary to use this SDK for most development efforts, it is provided solely for efficiency and convenience.*
 
+[autodoc documentation](docs/atakama.md)
+
 ### For example:
 
 In order to integrate with ssh, so that you have to approve a login on your phone, 

@@ -4,3 +4,4 @@
 # otherwise, the user should import the from a specific submodule
 
 from .plugin_base import *
+from .rule_engine import *

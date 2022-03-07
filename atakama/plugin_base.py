@@ -100,7 +100,7 @@ class Plugin(abc.ABC):
 
         version = look_for_sdk_version(cls.__module__)
         if not version:
-            raise PluginVersionMissingError("no version for %s" % cls.__name__)
+            raise PluginVersionMissingError(f"no version for {cls.__name__}")
         return version
 
     @classmethod
