@@ -3,3 +3,10 @@ repos:
     rev: stable
     hooks:
     - id: black
+-   repo: local
+    hooks:
+    - id: docmd
+      name: docmd
+      language: system
+      entry: bash -c "make docs"
+      files: .

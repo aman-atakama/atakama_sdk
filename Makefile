@@ -22,4 +22,7 @@ publish:
 install-hooks:
 	pre-commit install
 
-.PHONY: test requirements lint publish install-hooks
+docs:
+	python -mdocmd --out docs atakama --src=https://github.com/AtakamaLLC/atakama_sdk/blob/master/atakama
+
+.PHONY: test requirements lint publish install-hooks docs

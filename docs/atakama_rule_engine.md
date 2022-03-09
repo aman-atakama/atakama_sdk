@@ -2,20 +2,25 @@
 Atakama keyserver ruleset library
 
 
+[(view source)](https://github.com/AtakamaLLC/atakama_sdk/blob/master/atakama/rule_engine.py)
 ## ApprovalRequest(object)
 ApprovalRequest(request_type: atakama.rule_engine.RequestType, device_id: bytes, profile: atakama.rule_engine.ProfileInfo, auth_meta: List[atakama.rule_engine.MetaInfo])
+
 
 
 ## MetaInfo(object)
 MetaInfo(meta: str, complete: bool)
 
 
+
 ## ProfileInfo(object)
 ProfileInfo(profile_id: bytes, profile_words: List[str])
 
 
+
 ## RequestType(Enum)
 An enumeration.
+
 
 
 ## RuleEngine(object)
@@ -26,13 +31,17 @@ Given a request, will dispatch to the correct tree, and return the result.
 If no tree is available, will return None, so the caller can determine the default.
 
 
+
+
 ## RulePlugin(Plugin)
+
 Base class for key server approval rule handlers.
 
 When a key server receives a request, rules are consulted for approval.
 
 Each rule receives its configuration from the policy file,
 not the atakama config, like other plugins.
+
 
 
 #### .approve_request(self, request: atakama.rule_engine.ApprovalRequest) -> Optional[bool]
@@ -67,6 +76,7 @@ Reset or clear any limits, quotas, access counts, bytes-transferred for a given 
 Used by an administrator to "clear" or "reset" a user that has hit limits.
 
 
+
 ## RuleSet(list)
 A list of rules, can reply True, False, or None to an ApprovalRequest
 
@@ -75,8 +85,10 @@ All rules must pass in a ruleset
 An empty ruleset always returns True
 
 
+
 #### .approve_request(self, request: atakama.rule_engine.ApprovalRequest) -> bool
 Return true if all rules return true.
+
 
 ## RuleTree(list)
 A list of RuleSet objects.
@@ -85,6 +97,8 @@ Return True if *any* RuleSet returns True.
 Returns False if all RuleSets return False.
 
 
+
 #### .approve_request(self, request: atakama.rule_engine.ApprovalRequest) -> bool
 Return true if any ruleset returns true.
+
 
