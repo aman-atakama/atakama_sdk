@@ -2,6 +2,8 @@
 Atakama plugin base lib.
 
 
+[(view source)](https://github.com/AtakamaLLC/atakama_sdk/blob/master/atakama/plugin_base.py)
+## DetectorPlugin(Plugin)
 #### .needs_encryption(self, full_path) -> bool
 Return true if the file needs to be encrypted.
 
@@ -14,20 +16,30 @@ Return a list of dependent files to check if they need encryption.
 This is called any time a file in a secure folder is changed.
 
 
+
+## FileChangedPlugin(Plugin)
 #### .file_changed(self, full_path) -> None
 Called when a file is created or changed within a vault.
 
 Typically used for document (re)classification.
 
 
+
 ## Plugin(ABC)
 Derive from this class to make a new plugin type.
+
+
+#### .__init__(self, args: Any)
+Init instance, passing args defined in the config file.
+
+Only called if config.plugins['name'].enabled is set to True.
 
 
 #### .name() -> str
 Name this plugin.
 
 This is used in the configuration file to enable/disable this plugin.
+
 
 
 ## StartupPlugin(Plugin)
@@ -48,4 +60,5 @@ Exceptions cause the system to shut down, and may cause a dialog/alert.
 
 #### .shutdown(self)
 Runs at system shutdown, exceptions are logged but ignored.
+
 
