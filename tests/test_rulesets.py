@@ -295,18 +295,6 @@ def test_rule_id_loads(tmp_path):
 
     re = RuleEngine.from_yml_file(rule_yml)
 
-    # unique with same hash
-    assert (
-        re.map[RequestType.DECRYPT][0][0].args["rule_id"]
-        == "74f7d0d4f50171df97b517416ac46df2"
-    )
-    assert (
-        re.map[RequestType.DECRYPT][1][0].args["rule_id"]
-        == "74f7d0d4f50171df97b517416ac46df2.2"
-    )
-    assert re.map[RequestType.DECRYPT][2][0].args["rule_id"] == "my_id"
-    assert len({rs[0].args["rule_id"] for rs in re.map[RequestType.DECRYPT]}) == 3
-
     expect = {
         RequestType.DECRYPT.value: [
             [{"rule": "example_loader", "rule_id": "74f7d0d4f50171df97b517416ac46df2"}],
