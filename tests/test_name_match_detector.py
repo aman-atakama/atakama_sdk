@@ -1,19 +1,29 @@
 from example.name_match import NameMatchDetector
 
+
 def test_regex():
-    detector = NameMatchDetector({"type": " Regex", "pattern": "(?i).*\\.(pdf|doc|docx)$"})
+    detector = NameMatchDetector(
+        {"type": " Regex", "pattern": "(?i).*\\.(pdf|doc|docx)$"}
+    )
     assert detector.needs_encryption(r"C:\Users\Documents\Documentation\document.doc")
     assert detector.needs_encryption(r"C:\Users\Documents\Documentation\document.DoC")
     assert detector.needs_encryption(r"D:\Downloads\secrets.pdf")
     assert not detector.needs_encryption(r"D:\Downloads\secrets.xls")
     assert not detector.needs_encryption(r"C:\Users\Downloads\confidential.docm")
 
-    detector = NameMatchDetector({"type": " Regex", "pattern": "(?i).*\\.(pdf|doc|docx)$", "invert": "true"})
-    assert not detector.needs_encryption(r"C:\Users\Documents\Documentation\document.doc")
-    assert not detector.needs_encryption(r"C:\Users\Documents\Documentation\document.DoC")
+    detector = NameMatchDetector(
+        {"type": " Regex", "pattern": "(?i).*\\.(pdf|doc|docx)$", "invert": "true"}
+    )
+    assert not detector.needs_encryption(
+        r"C:\Users\Documents\Documentation\document.doc"
+    )
+    assert not detector.needs_encryption(
+        r"C:\Users\Documents\Documentation\document.DoC"
+    )
     assert not detector.needs_encryption(r"D:\Downloads\secrets.pdf")
     assert detector.needs_encryption(r"D:\Downloads\secrets.xls")
     assert detector.needs_encryption(r"C:\Users\Downloads\confidential.docm")
+
 
 def test_glob():
     detector = NameMatchDetector({"type": "gloB", "pattern": "*.pdf"})
@@ -25,6 +35,7 @@ def test_glob():
     assert not detector.needs_encryption(r"C:\Downloads\secRetS.pdf")
     assert not detector.needs_encryption(r"D:\Downloads\secrets.pdf")
     assert detector.needs_encryption(r"F:\Top Secret.docx")
+
 
 def test_true():
     detector = NameMatchDetector({"type": " * "})

@@ -1,5 +1,8 @@
 """Atakama keyserver ruleset library"""
 import abc
+import hashlib
+import json
+from collections import defaultdict
 from dataclasses import dataclass
 from enum import Enum
 from typing import List, Dict, Union, TYPE_CHECKING, Optional, Any
@@ -61,6 +64,9 @@ class RulePlugin(Plugin):
 
     Each rule receives its configuration from the policy file,
     not the atakama config, like other plugins.
+
+    In addition to standard arguments from the policy, file a unique
+    `rule_id` is injected, if not present.
     """
 
     @abc.abstractmethod
@@ -110,6 +116,27 @@ class RulePlugin(Plugin):
         return p
 
 
+class RuleIdGenerator:
+    """Manage unique rule id generation."""
+
+    def __init__(self):
+        self._seen = defaultdict(lambda: 0)
+        self._rule_seq = 0
+
+    def inject_rule_id(self, ent: dict):
+        self._rule_seq += 1
+        rule_id = ent.get("rule_id")
+        if not rule_id:
+            ent_data = json.dumps(ent, sort_keys=True, separators=(",", ":"))
+            ent_hash = hashlib.md5(ent_data.encode("utf8")).hexdigest()
+            # if the hash is enough, use it, that way it's relocatable and still consistent
+            if ent_hash in self._seen:
+                # otherwise append a sequence
+                ent_hash += "." + str(self._rule_seq)
+            rule_id = ent["rule_id"] = ent_hash
+        self._seen[rule_id] += 1
+
+
 class RuleSet(List[RulePlugin]):
     """A list of rules, can reply True, False, or None to an ApprovalRequest
 
@@ -133,10 +160,11 @@ class RuleSet(List[RulePlugin]):
         return True
 
     @classmethod
-    def from_list(cls, ruledata: List[dict]) -> "RuleSet":
+    def from_list(cls, ruledata: List[dict], rgen: RuleIdGenerator) -> "RuleSet":
         lst = []
         assert isinstance(ruledata, list), "Rulesets must be lists"
         for ent in ruledata:
+            rgen.inject_rule_id(ent)
             lst.append(RulePlugin.from_dict(ent))
         return RuleSet(lst)
 
@@ -157,10 +185,10 @@ class RuleTree(List[RuleSet]):
         return False
 
     @classmethod
-    def from_list(cls, ruledefs: List[List[dict]]) -> "RuleTree":
+    def from_list(cls, ruledefs: List[List[dict]], rgen: RuleIdGenerator) -> "RuleTree":
         ini = []
         for ent in ruledefs:
-            rset = RuleSet.from_list(ent)
+            rset = RuleSet.from_list(ent, rgen)
             ini.append(rset)
         return RuleTree(ini)
 
@@ -206,10 +234,11 @@ class RuleEngine:
               param: val1
         ```
         """
+        rgen = RuleIdGenerator()
         rule_map = {}
         for rtype, treedef in info.items():
             rtype = RequestType(rtype)
-            tree = RuleTree.from_list(treedef)
+            tree = RuleTree.from_list(treedef, rgen)
             rule_map[rtype] = tree
         return cls(rule_map)
 
