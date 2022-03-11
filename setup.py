@@ -14,7 +14,7 @@ def long_description():
 
 setup(
     name="atakama",
-    version="1.4.0",
+    version="1.5.0",
     description="Atakama sdk",
     packages=["atakama"],
     long_description=long_description(),
