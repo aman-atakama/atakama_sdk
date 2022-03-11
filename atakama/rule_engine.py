@@ -183,11 +183,8 @@ class RuleSet(List[RulePlugin]):
 
     def to_list(self) -> List[Dict]:
         lst = []
-        for (
-            ent
-        ) in (
-            self
-        ):  # pylint: disable=not-an-iterable  https://github.com/PyCQA/pylint/issues/2568
+        # https://github.com/PyCQA/pylint/issues/2568
+        for ent in self:  # pylint: disable=not-an-iterable
             lst.append(ent.to_dict())
         return lst
 
@@ -217,11 +214,7 @@ class RuleTree(List[RuleSet]):
 
     def to_list(self) -> List[List[Dict]]:
         lst = []
-        for (
-            ent
-        ) in (
-            self
-        ):  # pylint: disable=not-an-iterable  https://github.com/PyCQA/pylint/issues/2568
+        for ent in self:  # pylint: disable=not-an-iterable
             lst.append(ent.to_list())
         return lst
 
