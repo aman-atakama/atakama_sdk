@@ -128,7 +128,6 @@ class RuleIdGenerator:
 
     def __init__(self):
         self._seen = defaultdict(lambda: 0)
-        self._rule_seq = 0
 
     def inject_rule_id(self, ent: dict):
         """
@@ -137,17 +136,17 @@ class RuleIdGenerator:
         Keeps track of rule id's and ensures uniqueness, while trying to maintain consistency.
         """
 
-        self._rule_seq += 1
         rule_id = ent.get("rule_id")
         if not rule_id:
             ent_data = json.dumps(ent, sort_keys=True, separators=(",", ":"))
             ent_hash = hashlib.md5(ent_data.encode("utf8")).hexdigest()
             # if the hash is enough, use it, that way it's relocatable and still consistent
             if ent_hash in self._seen:
+                self._seen[ent_hash] += 1
                 # otherwise append a sequence
-                ent_hash += "." + str(self._rule_seq)
-            rule_id = ent["rule_id"] = ent_hash
-        self._seen[rule_id] += 1
+                ent_hash += "." + str(self._seen[ent_hash])
+            ent["rule_id"] = ent_hash
+        self._seen[ent["rule_id"]] += 1
 
 
 class RuleSet(List[RulePlugin]):
