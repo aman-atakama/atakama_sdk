@@ -1,7 +1,6 @@
 """Atakama keyserver ruleset library"""
 import abc
 import hashlib
-import inspect
 import json
 from collections import defaultdict
 from dataclasses import dataclass
@@ -184,7 +183,11 @@ class RuleSet(List[RulePlugin]):
 
     def to_list(self) -> List[Dict]:
         lst = []
-        for ent in self:
+        for (
+            ent
+        ) in (
+            self
+        ):  # pylint: disable=not-an-iterable  https://github.com/PyCQA/pylint/issues/2568
             lst.append(ent.to_dict())
         return lst
 
@@ -214,7 +217,11 @@ class RuleTree(List[RuleSet]):
 
     def to_list(self) -> List[List[Dict]]:
         lst = []
-        for ent in self:
+        for (
+            ent
+        ) in (
+            self
+        ):  # pylint: disable=not-an-iterable  https://github.com/PyCQA/pylint/issues/2568
             lst.append(ent.to_list())
         return lst
 
