@@ -42,6 +42,9 @@ When a key server receives a request, rules are consulted for approval.
 Each rule receives its configuration from the policy file,
 not the atakama config, like other plugins.
 
+In addition to standard arguments from the policy, file a unique
+`rule_id` is injected, if not present.
+
 
 
 #### .approve_request(self, request: atakama.rule_engine.ApprovalRequest) -> Optional[bool]

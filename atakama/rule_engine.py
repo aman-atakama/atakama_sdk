@@ -1,5 +1,8 @@
 """Atakama keyserver ruleset library"""
 import abc
+import hashlib
+import json
+from collections import defaultdict
 from dataclasses import dataclass
 from enum import Enum
 from typing import List, Dict, Union, TYPE_CHECKING, Optional, Any
@@ -61,6 +64,9 @@ class RulePlugin(Plugin):
 
     Each rule receives its configuration from the policy file,
     not the atakama config, like other plugins.
+
+    In addition to standard arguments from the policy, file a unique
+    `rule_id` is injected, if not present.
     """
 
     @abc.abstractmethod
@@ -109,6 +115,39 @@ class RulePlugin(Plugin):
         assert isinstance(p, RulePlugin), "Rule plugins must derive from RulePlugin"
         return p
 
+    def to_dict(self):
+        out = self.args.copy()
+        out["rule"] = self.name()
+        return out
+
+
+class RuleIdGenerator:
+    """Manage unique rule id generation."""
+
+    __autodoc__ = False
+
+    def __init__(self):
+        self._seen = defaultdict(lambda: 0)
+
+    def inject_rule_id(self, ent: dict):
+        """
+        Modify the supplied dictionary to add a rule_id, but only if a rule_id is not present.
+
+        Keeps track of rule id's and ensures uniqueness, while trying to maintain consistency.
+        """
+
+        rule_id = ent.get("rule_id")
+        if not rule_id:
+            ent_data = json.dumps(ent, sort_keys=True, separators=(",", ":"))
+            ent_hash = hashlib.md5(ent_data.encode("utf8")).hexdigest()
+            # if the hash is enough, use it, that way it's relocatable and still consistent
+            if ent_hash in self._seen:
+                self._seen[ent_hash] += 1
+                # otherwise append a sequence
+                ent_hash += "." + str(self._seen[ent_hash])
+            ent["rule_id"] = ent_hash
+        self._seen[ent["rule_id"]] += 1
+
 
 class RuleSet(List[RulePlugin]):
     """A list of rules, can reply True, False, or None to an ApprovalRequest
@@ -133,12 +172,20 @@ class RuleSet(List[RulePlugin]):
         return True
 
     @classmethod
-    def from_list(cls, ruledata: List[dict]) -> "RuleSet":
+    def from_list(cls, ruledata: List[dict], rgen: RuleIdGenerator) -> "RuleSet":
         lst = []
         assert isinstance(ruledata, list), "Rulesets must be lists"
         for ent in ruledata:
+            rgen.inject_rule_id(ent)
             lst.append(RulePlugin.from_dict(ent))
         return RuleSet(lst)
+
+    def to_list(self) -> List[Dict]:
+        lst = []
+        # https://github.com/PyCQA/pylint/issues/2568
+        for ent in self:  # pylint: disable=not-an-iterable
+            lst.append(ent.to_dict())
+        return lst
 
 
 class RuleTree(List[RuleSet]):
@@ -157,12 +204,18 @@ class RuleTree(List[RuleSet]):
         return False
 
     @classmethod
-    def from_list(cls, ruledefs: List[List[dict]]) -> "RuleTree":
+    def from_list(cls, ruledefs: List[List[dict]], rgen: RuleIdGenerator) -> "RuleTree":
         ini = []
         for ent in ruledefs:
-            rset = RuleSet.from_list(ent)
+            rset = RuleSet.from_list(ent, rgen)
             ini.append(rset)
         return RuleTree(ini)
+
+    def to_list(self) -> List[List[Dict]]:
+        lst = []
+        for ent in self:  # pylint: disable=not-an-iterable
+            lst.append(ent.to_list())
+        return lst
 
 
 class RuleEngine:
@@ -206,10 +259,11 @@ class RuleEngine:
               param: val1
         ```
         """
+        rgen = RuleIdGenerator()
         rule_map = {}
         for rtype, treedef in info.items():
             rtype = RequestType(rtype)
-            tree = RuleTree.from_list(treedef)
+            tree = RuleTree.from_list(treedef, rgen)
             rule_map[rtype] = tree
         return cls(rule_map)
 
@@ -218,3 +272,9 @@ class RuleEngine:
             for rs in rt:
                 for rule in rs:
                     rule.clear_quota(profile)
+
+    def to_dict(self) -> Dict[str, List[List[Dict]]]:
+        dct = {}
+        for req, ent in self.map.items():
+            dct[req.value] = ent.to_list()
+        return dct
