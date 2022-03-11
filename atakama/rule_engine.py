@@ -1,6 +1,7 @@
 """Atakama keyserver ruleset library"""
 import abc
 import hashlib
+import inspect
 import json
 from collections import defaultdict
 from dataclasses import dataclass
@@ -115,6 +116,11 @@ class RulePlugin(Plugin):
         assert isinstance(p, RulePlugin), "Rule plugins must derive from RulePlugin"
         return p
 
+    def to_dict(self):
+        out = self.args.copy()
+        out["rule"] = self.name()
+        return out
+
 
 class RuleIdGenerator:
     """Manage unique rule id generation."""
@@ -176,6 +182,12 @@ class RuleSet(List[RulePlugin]):
             lst.append(RulePlugin.from_dict(ent))
         return RuleSet(lst)
 
+    def to_list(self) -> List[Dict]:
+        lst = []
+        for ent in self:
+            lst.append(ent.to_dict())
+        return lst
+
 
 class RuleTree(List[RuleSet]):
     """A list of RuleSet objects.
@@ -199,6 +211,12 @@ class RuleTree(List[RuleSet]):
             rset = RuleSet.from_list(ent, rgen)
             ini.append(rset)
         return RuleTree(ini)
+
+    def to_list(self) -> List[List[Dict]]:
+        lst = []
+        for ent in self:
+            lst.append(ent.to_list())
+        return lst
 
 
 class RuleEngine:
@@ -255,3 +273,9 @@ class RuleEngine:
             for rs in rt:
                 for rule in rs:
                     rule.clear_quota(profile)
+
+    def to_dict(self) -> Dict[str, List[List[Dict]]]:
+        dct = {}
+        for req, ent in self.map.items():
+            dct[req.value] = ent.to_list()
+        return dct

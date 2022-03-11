@@ -306,3 +306,17 @@ def test_rule_id_loads(tmp_path):
     )
     assert re.map[RequestType.DECRYPT][2][0].args["rule_id"] == "my_id"
     assert len({rs[0].args["rule_id"] for rs in re.map[RequestType.DECRYPT]}) == 3
+
+    expect = {
+        RequestType.DECRYPT.value: [
+            [{"rule": "example_loader", "rule_id": "74f7d0d4f50171df97b517416ac46df2"}],
+            [
+                {
+                    "rule": "example_loader",
+                    "rule_id": "74f7d0d4f50171df97b517416ac46df2.2",
+                }
+            ],
+            [{"rule": "example_loader", "rule_id": "my_id"}],
+        ]
+    }
+    assert re.to_dict() == expect
