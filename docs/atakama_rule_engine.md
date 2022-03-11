@@ -33,11 +33,6 @@ If no tree is available, will return None, so the caller can determine the defau
 
 
 
-## RuleIdGenerator(object)
-Manage unique rule id generation.
-
-
-
 ## RulePlugin(Plugin)
 
 Base class for key server approval rule handlers.

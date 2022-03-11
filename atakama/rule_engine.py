@@ -119,11 +119,19 @@ class RulePlugin(Plugin):
 class RuleIdGenerator:
     """Manage unique rule id generation."""
 
+    __autodoc__ = False
+
     def __init__(self):
         self._seen = defaultdict(lambda: 0)
         self._rule_seq = 0
 
     def inject_rule_id(self, ent: dict):
+        """
+        Modify the supplied dictionary to add a rule_id, but only if a rule_id is not present.
+
+        Keeps track of rule id's and ensures uniqueness, while trying to maintain consistency.
+        """
+
         self._rule_seq += 1
         rule_id = ent.get("rule_id")
         if not rule_id:
