@@ -51,9 +51,11 @@ class ApprovalRequest:
     device_id: bytes
     """Requesting device uuid"""
     profile: ProfileInfo
-    """"""
+    """User profile information"""
     auth_meta: List[MetaInfo]
     """Authenticated metadata associated with the encrypted data.   Typically a path to a file."""
+    cryptographic_id: bytes
+    """"Unique cryptographic object id.  Can be used as a file UUID."""
 
 
 class RulePlugin(Plugin):

@@ -4,7 +4,7 @@ Atakama keyserver ruleset library
 
 [(view source)](https://github.com/AtakamaLLC/atakama_sdk/blob/master/atakama/rule_engine.py)
 ## ApprovalRequest(object)
-ApprovalRequest(request_type: atakama.rule_engine.RequestType, device_id: bytes, profile: atakama.rule_engine.ProfileInfo, auth_meta: List[atakama.rule_engine.MetaInfo])
+ApprovalRequest(request_type: atakama.rule_engine.RequestType, device_id: bytes, profile: atakama.rule_engine.ProfileInfo, auth_meta: List[atakama.rule_engine.MetaInfo], cryptographic_id: bytes)
 
 
 
