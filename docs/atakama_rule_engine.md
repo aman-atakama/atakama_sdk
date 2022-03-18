@@ -4,7 +4,16 @@ Atakama keyserver ruleset library
 
 [(view source)](https://github.com/AtakamaLLC/atakama_sdk/blob/master/atakama/rule_engine.py)
 ## ApprovalRequest(object)
-ApprovalRequest(request_type: atakama.rule_engine.RequestType, device_id: bytes, profile: atakama.rule_engine.ProfileInfo, auth_meta: List[atakama.rule_engine.MetaInfo])
+
+Rule engine plugins receive this object upon request.
+
+Members:
+ - request_type: RequestType
+ - device_id: bytes - *uuid for the device*
+ - profile: ProfileInfo - *user profile uuid and verification words*
+ - auth_meta: List[MetaInfo] - *typically a path to a file*
+ - cryptographic_id: bytes - *uuid for the file or data object**
+
 
 
 

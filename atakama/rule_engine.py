@@ -46,14 +46,22 @@ class MetaInfo:
 
 @dataclass
 class ApprovalRequest:
+    """
+    Rule engine plugins receive this object upon request.
+
+    Members:
+     - request_type: RequestType
+     - device_id: bytes - *uuid for the device*
+     - profile: ProfileInfo - *user profile uuid and verification words*
+     - auth_meta: List[MetaInfo] - *typically a path to a file*
+     - cryptographic_id: bytes - *uuid for the file or data object**
+    """
+
     request_type: RequestType
-    """Request type"""
     device_id: bytes
-    """Requesting device uuid"""
     profile: ProfileInfo
-    """"""
     auth_meta: List[MetaInfo]
-    """Authenticated metadata associated with the encrypted data.   Typically a path to a file."""
+    cryptographic_id: bytes
 
 
 class RulePlugin(Plugin):

@@ -48,6 +48,7 @@ class TestApprovalRequest(ApprovalRequest):
             device_id=device_id,
             profile=profile,
             auth_meta=auth_meta,
+            cryptographic_id=b"cid",
         )
 
 
