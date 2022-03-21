@@ -205,7 +205,8 @@ class RuleSet(List[RulePlugin]):
                     return True
             except Exception as ex:
                 log.error("error in rule %s: %s", rule, repr(ex))
-                return False
+                continue
+        return False
 
 
 class RuleTree(List[RuleSet]):

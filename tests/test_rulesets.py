@@ -204,9 +204,18 @@ def test_clear_quota():
             self.quota.pop(profile.profile_id, None)
 
         def at_quota(self, profile: ProfileInfo):
+            assert profile.profile_id in self.quota, "exceptions == false"
             return self.quota[profile.profile_id] >= self.args["limit"]
 
-    rs = RuleSet([ExampleRule({"limit": 2})])
+    class ExampleOtherRule(RulePlugin):
+        @staticmethod
+        def name():
+            return "other"
+
+        def approve_request(self, request):
+            return True
+
+    rs = RuleSet([ExampleRule({"limit": 2}), ExampleOtherRule({})])
     re = RuleEngine({RequestType.DECRYPT: RuleTree([rs])})
 
     # limit 2
@@ -221,6 +230,8 @@ def test_clear_quota():
     assert re.approve_request(ar1)
 
     assert re.at_quota(RequestType.DECRYPT, pi1)
+    assert not re.at_quota(RequestType.DECRYPT, pi2)
+    assert not re.at_quota(RequestType.SEARCH, pi1)
 
     assert not re.approve_request(ar1)
 
