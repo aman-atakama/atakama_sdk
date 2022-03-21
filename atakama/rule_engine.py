@@ -300,11 +300,14 @@ class RuleEngine:
                 for rule in rs:
                     rule.clear_quota(profile)
 
-    def at_quota(self, request_type: RequestType, profile: ProfileInfo) -> bool:
-        tree = self.map.get(request_type, None)
-        if tree is None:
-            return False
-        return tree.at_quota(profile)
+    def at_quota(self, profile: ProfileInfo) -> bool:
+        seen = set()
+        for tree in self.map.values():
+            if not id(tree) in seen:
+                if tree.at_quota(profile):
+                    return True
+                seen.add(id(tree))
+        return False
 
     def to_dict(self) -> Dict[str, List[List[Dict]]]:
         dct = {}

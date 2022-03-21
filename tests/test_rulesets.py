@@ -224,14 +224,13 @@ def test_clear_quota():
     ar1 = TestApprovalRequest(profile=pi1)
     ar2 = TestApprovalRequest(profile=pi2)
 
-    assert not re.at_quota(RequestType.DECRYPT, pi1)
+    assert not re.at_quota(pi1)
 
     assert re.approve_request(ar1)
     assert re.approve_request(ar1)
 
-    assert re.at_quota(RequestType.DECRYPT, pi1)
-    assert not re.at_quota(RequestType.DECRYPT, pi2)
-    assert not re.at_quota(RequestType.SEARCH, pi1)
+    assert re.at_quota(pi1)
+    assert not re.at_quota(pi2)
 
     assert not re.approve_request(ar1)
 
