@@ -103,7 +103,6 @@ class RulePlugin(Plugin):
         This is not a guarantee of future approval, it's a way of checking to see if any users have
         reached any limits, quotas or other stateful things for reporting purposed.
         """
-        return None
 
     def clear_quota(self, profile: ProfileInfo) -> None:
         """
