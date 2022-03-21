@@ -72,10 +72,11 @@ This is called any time:
 See the RequestType class for more information.
 
 
-#### .check_quota(self, profile: atakama.rule_engine.ProfileInfo) -> bool
+#### .at_quota(self, profile: atakama.rule_engine.ProfileInfo) -> Optional[bool]
 
-Returns False if the profile will not be approved in the next request.
-Returns True if the profile *may* be approved for access, and is not past a limit.
+Returns True if the profile will not be approved in the next request.
+Returns False if the profile *may* be approved for access, and is not past a limit.
+Returns None if quotas are not used.
 
 This is not a guarantee of future approval, it's a way of checking to see if any users have
 reached any limits, quotas or other stateful things for reporting purposed.

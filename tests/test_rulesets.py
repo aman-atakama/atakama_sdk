@@ -203,16 +203,23 @@ def test_clear_quota():
         def clear_quota(self, profile: ProfileInfo) -> None:
             self.quota.pop(profile.profile_id, None)
 
+        def at_quota(self, profile: ProfileInfo):
+            return self.quota[profile.profile_id] >= self.args["limit"]
+
     rs = RuleSet([ExampleRule({"limit": 2})])
     re = RuleEngine({RequestType.DECRYPT: RuleTree([rs])})
 
     # limit 2
-    assert re.approve_request(
-        TestApprovalRequest(profile=TestProfileInfo(profile_id=b"pid1"))
-    )
-    assert re.approve_request(
-        TestApprovalRequest(profile=TestProfileInfo(profile_id=b"pid1"))
-    )
+    pi1 = TestProfileInfo(profile_id=b"pid1")
+    ar1 = TestApprovalRequest(profile=pi1)
+
+    assert not re.at_quota(RequestType.DECRYPT, pi1)
+
+    assert re.approve_request(ar1)
+    assert re.approve_request(ar1)
+
+    assert re.at_quota(RequestType.DECRYPT, pi1)
+
     assert not re.approve_request(
         TestApprovalRequest(profile=TestProfileInfo(profile_id=b"pid1"))
     )
