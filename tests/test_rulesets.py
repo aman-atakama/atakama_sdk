@@ -211,7 +211,9 @@ def test_clear_quota():
 
     # limit 2
     pi1 = TestProfileInfo(profile_id=b"pid1")
+    pi2 = TestProfileInfo(profile_id=b"pid2")
     ar1 = TestApprovalRequest(profile=pi1)
+    ar2 = TestApprovalRequest(profile=pi2)
 
     assert not re.at_quota(RequestType.DECRYPT, pi1)
 
@@ -220,29 +222,21 @@ def test_clear_quota():
 
     assert re.at_quota(RequestType.DECRYPT, pi1)
 
-    assert not re.approve_request(
-        TestApprovalRequest(profile=TestProfileInfo(profile_id=b"pid1"))
-    )
+    assert not re.approve_request(ar1)
 
     # second pid limit 2
-    assert re.approve_request(
-        TestApprovalRequest(profile=TestProfileInfo(profile_id=b"pid2"))
-    )
-    assert re.approve_request(
-        TestApprovalRequest(profile=TestProfileInfo(profile_id=b"pid2"))
-    )
-    assert not re.approve_request(
-        TestApprovalRequest(profile=TestProfileInfo(profile_id=b"pid2"))
-    )
+    assert re.approve_request(ar2)
+    assert re.approve_request(ar2)
+    assert not re.approve_request(ar2)
 
-    re.clear_quota(TestProfileInfo(profile_id=b"pid1"))
+    re.clear_quota(pi1)
 
     # other request types are ignored, and don't impact quota
     assert (
         re.approve_request(
             TestApprovalRequest(
                 request_type=RequestType.SEARCH,
-                profile=TestProfileInfo(profile_id=b"pid1"),
+                profile=pi1,
             )
         )
         is None
@@ -251,7 +245,7 @@ def test_clear_quota():
         re.approve_request(
             TestApprovalRequest(
                 request_type=RequestType.SEARCH,
-                profile=TestProfileInfo(profile_id=b"pid1"),
+                profile=pi1,
             )
         )
         is None
@@ -260,21 +254,17 @@ def test_clear_quota():
         re.approve_request(
             TestApprovalRequest(
                 request_type=RequestType.SEARCH,
-                profile=TestProfileInfo(profile_id=b"pid1"),
+                profile=pi1,
             )
         )
         is None
     )
 
     # pid 1 is still clear
-    assert re.approve_request(
-        TestApprovalRequest(profile=TestProfileInfo(profile_id=b"pid1"))
-    )
+    assert re.approve_request(ar1)
 
     # pid 2 is not
-    assert not re.approve_request(
-        TestApprovalRequest(profile=TestProfileInfo(profile_id=b"pid2"))
-    )
+    assert not re.approve_request(ar2)
 
 
 def test_rule_id_loads(tmp_path):
