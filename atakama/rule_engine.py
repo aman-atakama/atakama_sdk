@@ -94,10 +94,11 @@ class RulePlugin(Plugin):
         See the RequestType class for more information.
         """
 
-    def check_quota(self, profile: ProfileInfo) -> bool:
+    def at_quota(self, profile: ProfileInfo) -> Optional[bool]:
         """
-        Returns False if the profile will not be approved in the next request.
-        Returns True if the profile *may* be approved for access, and is not past a limit.
+        Returns True if the profile will not be approved in the next request.
+        Returns False if the profile *may* be approved for access, and is not past a limit.
+        Returns None if quotas are not used.
 
         This is not a guarantee of future approval, it's a way of checking to see if any users have
         reached any limits, quotas or other stateful things for reporting purposed.
@@ -195,6 +196,17 @@ class RuleSet(List[RulePlugin]):
             lst.append(ent.to_dict())
         return lst
 
+    def at_quota(self, profile: ProfileInfo) -> bool:
+        for rule in self:  # pylint: disable=not-an-iterable
+            try:
+                res = rule.at_quota(profile)
+                if res:
+                    return True
+            except Exception as ex:
+                log.error("error in rule %s: %s", rule, repr(ex))
+                continue
+        return False
+
 
 class RuleTree(List[RuleSet]):
     """A list of RuleSet objects.
@@ -224,6 +236,13 @@ class RuleTree(List[RuleSet]):
         for ent in self:  # pylint: disable=not-an-iterable
             lst.append(ent.to_list())
         return lst
+
+    def at_quota(self, profile: ProfileInfo) -> bool:
+        for rset in self:  # pylint: disable=not-an-iterable
+            res = rset.at_quota(profile)
+            if res:
+                return True
+        return False
 
 
 class RuleEngine:
@@ -280,6 +299,15 @@ class RuleEngine:
             for rs in rt:
                 for rule in rs:
                     rule.clear_quota(profile)
+
+    def at_quota(self, profile: ProfileInfo) -> bool:
+        seen = set()
+        for tree in self.map.values():
+            if not id(tree) in seen:
+                if tree.at_quota(profile):
+                    return True
+                seen.add(id(tree))
+        return False
 
     def to_dict(self) -> Dict[str, List[List[Dict]]]:
         dct = {}
