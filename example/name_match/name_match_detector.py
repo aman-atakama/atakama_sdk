@@ -1,7 +1,11 @@
+# SPDX-FileCopyrightText: © 2020 Atakama, Inc <support@atakama.com>
+# SPDX-License-Identifier: LGPL-3.0-or-later
+
 import fnmatch
 import re
 
 from atakama import DetectorPlugin
+
 
 class NameMatchDetector(DetectorPlugin):
     """A Detector that classifies files based on name.
@@ -23,6 +27,7 @@ class NameMatchDetector(DetectorPlugin):
 
     If *, all files are selected. No pattern field in the config is required.
     The invert field is ignored."""
+
     def __init__(self, args):
         super().__init__(args)
         match_type = args["type"].strip().lower()

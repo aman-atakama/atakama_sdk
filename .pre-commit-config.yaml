@@ -1,6 +1,6 @@
 repos:
 -   repo: https://github.com/ambv/black
-    rev: stable
+    rev: 22.1.0
     hooks:
     - id: black
 -   repo: local
@@ -10,3 +10,11 @@ repos:
       language: system
       entry: bash -c "make docs"
       files: .
+-   repo: https://github.com/Lucas-C/pre-commit-hooks
+    rev: v1.1.13
+    hooks:
+    - id: insert-license
+      files: \.py$
+      args:
+        - --license-filepath
+        - ./license_header.txt
