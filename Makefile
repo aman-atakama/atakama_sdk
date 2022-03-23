@@ -9,7 +9,7 @@ requirements:
 
 lint:
 	python -m pylint atakama
-	black atakama tests
+	python -m pre_commit run --all-files
 
 test:
 	PYTHONPATH=. python -mpytest --cov atakama -v tests
