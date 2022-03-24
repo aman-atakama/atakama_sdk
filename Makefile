@@ -9,7 +9,8 @@ requirements:
 
 lint:
 	python -m pylint atakama
-	black atakama tests
+	python -m pre_commit run insert-license --all-files
+	python -m pre_commit run black --all-files
 
 test:
 	PYTHONPATH=. python -mpytest --cov atakama -v tests
@@ -20,7 +21,7 @@ publish:
 	twine upload dist/*
 
 install-hooks:
-	pre-commit install
+	python -m pre_commit install
 
 docs:
 	python -mdocmd --out docs atakama --src=https://github.com/AtakamaLLC/atakama_sdk/blob/master/atakama

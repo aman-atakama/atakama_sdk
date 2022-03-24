@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: © Atakama, Inc <support@atakama.com>
+# SPDX-License-Identifier: LGPL-3.0-or-later
+
 """Atakama sdk."""
 
 # only import stuff here that has no co-deps, external-lib deps, etc.
