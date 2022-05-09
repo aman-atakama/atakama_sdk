@@ -5,6 +5,7 @@
 import abc
 import hashlib
 import json
+import threading
 from collections import defaultdict
 from dataclasses import dataclass
 from enum import Enum
@@ -26,9 +27,8 @@ class RequestType(Enum):
     DECRYPT = "decrypt"
     SEARCH = "search"
     CREATE_PROFILE = "create_profile"
-    ACTIVATE_LOCATION = "activate_location"
     CREATE_LOCATION = "create_location"
-    RENAME_FILE = "rename"
+    RENAME = "rename"
     SECURE_EXPORT = "secure_export"
 
 
@@ -88,7 +88,7 @@ class RulePlugin(Plugin):
     @abc.abstractmethod
     def approve_request(self, request: ApprovalRequest) -> Optional[bool]:
         """
-        Return True if the request to decrypt a file will be authorized.
+        Return True if the request will be authorized.
 
         Return False if the request is to be denied.
         Raise None if the request type is unknown or invalid.
@@ -100,6 +100,13 @@ class RulePlugin(Plugin):
             a decryption agent wishes to perform other multifactor request types.
 
         See the RequestType class for more information.
+        """
+
+    def use_quota(self, request: ApprovalRequest):
+        """
+        Given that a request has already been authorized via approve_request(), indicate
+        that this rule is being used for request approval and any intneral counters
+        should be incremented.
         """
 
     def at_quota(self, profile: ProfileInfo) -> Optional[bool]:
@@ -174,25 +181,41 @@ class RuleSet(List[RulePlugin]):
     An empty ruleset always returns True
     """
 
+    def __init__(self, *args, **kws):
+        super().__init__(*args, **kws)
+
+        self.__lock = threading.RLock()
+
     def approve_request(self, request: ApprovalRequest) -> bool:
         """Return true if all rules return true."""
-        for i, rule in enumerate(self):  # pylint: disable=not-an-iterable
-            try:
-                res = rule.approve_request(request)
-                log.debug(
-                    "RuleSet.approve_request[%s]: rule_id=%s i=%i res=%s",
-                    request.request_type,
-                    rule.rule_id,
-                    i,
-                    res,
-                )
-                if res is None:
-                    log.error("unknown request type error in rule %s", rule)
-                if not res:
+        # Lock to prevent races between approve_request and use_quota
+        with self.__lock:
+            # Check if all rules approve
+            for i, rule in enumerate(self):  # pylint: disable=not-an-iterable
+                try:
+                    res = rule.approve_request(request)
+                    log.debug(
+                        "RuleSet.approve_request[%s]: rule_id=%s i=%i res=%s",
+                        request.request_type,
+                        rule.rule_id,
+                        i,
+                        res,
+                    )
+                    if res is None:
+                        log.error("unknown request type error in rule %s", rule)
+                    if not res:
+                        return False
+                except Exception as ex:
+                    log.error("error in rule %s: %s", rule, repr(ex))
                     return False
-            except Exception as ex:
-                log.error("error in rule %s: %s", rule, repr(ex))
-                return False
+
+            # Rule set succeeded, so now inc the quota counts
+            for i, rule in enumerate(self):  # pylint: disable=not-an-iterable
+                try:
+                    rule.use_quota(request)
+                except Exception as ex:
+                    log.error("error in rule use_quota %s: %s", rule, repr(ex))
+                    return False
         return True
 
     @classmethod
