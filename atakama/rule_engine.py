@@ -261,7 +261,7 @@ class RuleSet(List[RulePlugin]):
     def find_rules(self, rule_type: Type[RulePlugin]):
         """Given a rule engine class type, return the list of rules defined with that class."""
         ret = []
-        for rule in self:
+        for rule in self:  # pylint: disable=not-an-iterable
             if isinstance(rule, rule_type):
                 ret.append(rule)
         return ret
@@ -275,6 +275,7 @@ class RuleTree(List[RuleSet]):
     """
 
     def approve_request(self, request: ApprovalRequest) -> Union[bool, int]:
+        """Return the ruleset id if any ruleset returns true, otherwise False."""
         for i, rset in enumerate(self):  # pylint: disable=not-an-iterable
             res = rset.approve_request(request)
             log.debug(
@@ -385,8 +386,13 @@ class RuleEngine:
         return dct
 
     def get_rule_set(self, rs_id: int) -> RuleSet:
-        """Given a ruleset id, return the associated RuleSet."""
+        """Given a ruleset id, return the associated RuleSet.
+
+        Raises IndexError if not found.
+        """
         for tree in self.map.values():
             for rset in tree:
                 if id(rset) == rs_id:
                     return rset
+
+        raise IndexError("invalid ruleset id")
