@@ -3,7 +3,9 @@
 
 import json
 from multiprocessing.pool import ThreadPool
+from typing import Optional
 
+import pytest
 import yaml
 
 from atakama import (
@@ -456,3 +458,44 @@ def test_atomic_ruleset_evaluation(tmp_path):
 
     assert used == 50
     assert approvals == 50
+
+
+def test_rule_id_return():
+    # noinspection PyUnusedLocal
+    class ExampleRule(RulePlugin):
+        @staticmethod
+        def name():
+            return "example_loader"
+
+        def __init__(self, args):
+            super().__init__(args)
+
+        def approve_request(self, request):
+            return request.device_id == bytes.fromhex(self.args["param"])
+
+    info = {
+        RequestType.DECRYPT.value: [
+            [{"rule": "example_loader", "param": b"1".hex()}],
+            [{"rule": "example_loader", "param": b"2".hex()}],
+        ]
+    }
+
+    re = RuleEngine.from_dict(info)
+    ret1 = re.approve_request(TestApprovalRequest(device_id=b"1"))
+    assert ret1
+    ret2 = re.approve_request(TestApprovalRequest(device_id=b"2"))
+    assert ret2
+    assert ret1 != ret2
+
+    ret3 = re.approve_request(TestApprovalRequest(device_id=b"1"))
+    assert ret3 == ret1
+
+    # bad id
+    with pytest.raises(IndexError):
+        re.get_rule_set(99)
+
+    # find by class
+    # lookup by id
+    rs = re.get_rule_set(ret1)
+
+    assert rs.find_rules(ExampleRule)[0].args["param"] == b"1".hex()
