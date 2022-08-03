@@ -9,7 +9,7 @@ import threading
 from collections import defaultdict
 from dataclasses import dataclass
 from enum import Enum
-from typing import List, Dict, Union, TYPE_CHECKING, Optional, Any
+from typing import List, Dict, Union, TYPE_CHECKING, Optional, Any, Type
 import logging
 
 import yaml
@@ -105,7 +105,7 @@ class RulePlugin(Plugin):
     def use_quota(self, request: ApprovalRequest):
         """
         Given that a request has already been authorized via approve_request(), indicate
-        that this rule is being used for request approval and any intneral counters
+        that this rule is being used for request approval and any internal counters
         should be incremented.
         """
 
@@ -153,6 +153,17 @@ class RuleIdGenerator:
     def __init__(self):
         self._seen = defaultdict(lambda: 0)
 
+    def generate(self, ent: Any) -> str:
+        ent_data = json.dumps(ent, sort_keys=True, separators=(",", ":"))
+        ent_hash = hashlib.md5(ent_data.encode("utf8")).hexdigest()
+        # if the hash is enough, use it, that way it's relocatable and still consistent
+        if ent_hash in self._seen:
+            self._seen[ent_hash] += 1
+            # otherwise append a sequence
+            ent_hash += "." + str(self._seen[ent_hash])
+        self._seen[ent_hash] += 1
+        return ent_hash
+
     def inject_rule_id(self, ent: dict):
         """
         Modify the supplied dictionary to add a rule_id, but only if a rule_id is not present.
@@ -162,15 +173,10 @@ class RuleIdGenerator:
 
         rule_id = ent.get("rule_id")
         if not rule_id:
-            ent_data = json.dumps(ent, sort_keys=True, separators=(",", ":"))
-            ent_hash = hashlib.md5(ent_data.encode("utf8")).hexdigest()
-            # if the hash is enough, use it, that way it's relocatable and still consistent
-            if ent_hash in self._seen:
-                self._seen[ent_hash] += 1
-                # otherwise append a sequence
-                ent_hash += "." + str(self._seen[ent_hash])
+            ent_hash = self.generate(ent)
             ent["rule_id"] = ent_hash
-        self._seen[ent["rule_id"]] += 1
+        else:
+            self._seen[ent["rule_id"]] += 1
 
 
 class RuleSet(List[RulePlugin]):
@@ -252,16 +258,22 @@ class RuleSet(List[RulePlugin]):
                 continue
         return False
 
+    def find_rules(self, rule_type: Type[RulePlugin]):
+        """Given a rule engine class type, return the list of rules defined with that class."""
+        ret = []
+        for rule in self:
+            if isinstance(rule, rule_type):
+                ret.append(rule)
+        return ret
 
 class RuleTree(List[RuleSet]):
     """A list of RuleSet objects.
 
-    Return True if *any* RuleSet returns True.
+    Return the ruleset id if *any* RuleSet returns True.
     Returns False if all RuleSets return False.
     """
 
-    def approve_request(self, request: ApprovalRequest) -> bool:
-        """Return true if any ruleset returns true."""
+    def approve_request(self, request: ApprovalRequest) -> Union[bool, int]:
         for i, rset in enumerate(self):  # pylint: disable=not-an-iterable
             res = rset.approve_request(request)
             log.debug(
@@ -271,7 +283,7 @@ class RuleTree(List[RuleSet]):
                 res,
             )
             if res:
-                return True
+                return id(rset)
         return False
 
     @classmethod
@@ -307,7 +319,8 @@ class RuleEngine:
     def __init__(self, rule_map: Dict[RequestType, RuleTree]):
         self.map: Dict[RequestType, RuleTree] = rule_map
 
-    def approve_request(self, request: ApprovalRequest) -> Optional[bool]:
+    def approve_request(self, request: ApprovalRequest) -> Optional[int]:
+        """Returns the associated ruleset id, if any ruleset matches."""
         tree = self.map.get(request.request_type, None)
         if tree is None:
             log.debug(
@@ -369,3 +382,10 @@ class RuleEngine:
         for req, ent in self.map.items():
             dct[req.value] = ent.to_list()
         return dct
+
+    def get_rule_set(self, rs_id: int) -> RuleSet:
+        """Given a ruleset id, return the associated RuleSet."""
+        for tree in self.map.values():
+            for rset in tree:
+                if id(rset) == rs_id:
+                    return rset
