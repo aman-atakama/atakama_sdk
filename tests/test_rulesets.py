@@ -473,8 +473,8 @@ def test_rule_id_return():
 
     info = {
         RequestType.DECRYPT.value: [
-            [{"rule": "example_loader", "param": b'1'.hex()}],
-            [{"rule": "example_loader", "param": b'2'.hex()}],
+            [{"rule": "example_loader", "param": b"1".hex()}],
+            [{"rule": "example_loader", "param": b"2".hex()}],
         ]
     }
 
@@ -492,4 +492,4 @@ def test_rule_id_return():
     rs = re.get_rule_set(ret1)
 
     # find by class
-    assert rs.find_rules(ExampleRule)[0].args["param"] == b'1'.hex()
+    assert rs.find_rules(ExampleRule)[0].args["param"] == b"1".hex()

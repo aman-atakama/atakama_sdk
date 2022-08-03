@@ -266,6 +266,7 @@ class RuleSet(List[RulePlugin]):
                 ret.append(rule)
         return ret
 
+
 class RuleTree(List[RuleSet]):
     """A list of RuleSet objects.
 
