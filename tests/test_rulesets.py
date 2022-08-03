@@ -3,7 +3,9 @@
 
 import json
 from multiprocessing.pool import ThreadPool
+from typing import Optional
 
+import pytest
 import yaml
 
 from atakama import (
@@ -488,8 +490,12 @@ def test_rule_id_return():
     ret3 = re.approve_request(TestApprovalRequest(device_id=b"1"))
     assert ret3 == ret1
 
+    # bad id
+    with pytest.raises(IndexError):
+        re.get_rule_set(99)
+
+    # find by class
     # lookup by id
     rs = re.get_rule_set(ret1)
 
-    # find by class
     assert rs.find_rules(ExampleRule)[0].args["param"] == b"1".hex()
