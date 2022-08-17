@@ -31,6 +31,7 @@ class RequestType(Enum):
     RENAME = "rename"
     SECURE_EXPORT = "secure_export"
     START_SESSION = "start_session"
+    CHANGE_PROFILE = "change_profile"
 
 
 @dataclass
