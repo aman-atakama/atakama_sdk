@@ -1,6 +1,9 @@
 # SPDX-FileCopyrightText: © Atakama, Inc <support@atakama.com>
 # SPDX-License-Identifier: LGPL-3.0-or-later
 
+# no frozendict in python
+# pylint: disable=dangerous-default-value
+
 """Atakama keyserver ruleset library"""
 import abc
 import hashlib
@@ -87,6 +90,16 @@ class RulePlugin(Plugin):
         super().__init__(args)
         self.rule_id = args["rule_id"]
 
+    @classmethod
+    def set_args_defaults(cls, args: dict, defaults: Optional[dict]):
+        if not defaults:
+            return
+        for k, v in defaults.items():
+            if k not in args:
+                args[k] = v
+            elif isinstance(v, dict) and isinstance(args[k], dict):
+                cls.set_args_defaults(args[k], v)
+
     @abc.abstractmethod
     def approve_request(self, request: ApprovalRequest) -> Optional[bool]:
         """
@@ -129,7 +142,7 @@ class RulePlugin(Plugin):
         """
 
     @classmethod
-    def from_dict(cls, data: dict) -> "RulePlugin":
+    def from_dict(cls, data: dict, defaults=None) -> "RulePlugin":
         """
         Factory function called with a dict from the rules yaml file.
         """
@@ -137,6 +150,8 @@ class RulePlugin(Plugin):
         assert type(data) is dict, "Rule entries must be dicts"
         assert "rule" in data, "Rule entries must have a plugin name"
         pname = data.pop("rule")
+        if pname in defaults:
+            cls.set_args_defaults(data, defaults[pname])
         p = RulePlugin.get_by_name(pname)(data)
         assert isinstance(p, RulePlugin), "Rule plugins must derive from RulePlugin"
         return p
@@ -227,12 +242,14 @@ class RuleSet(List[RulePlugin]):
         return True
 
     @classmethod
-    def from_list(cls, ruledata: List[dict], rgen: RuleIdGenerator) -> "RuleSet":
+    def from_list(
+        cls, ruledata: List[dict], rgen: RuleIdGenerator, defaults=None
+    ) -> "RuleSet":
         lst = []
         assert isinstance(ruledata, list), "Rulesets must be lists"
         for ent in ruledata:
             rgen.inject_rule_id(ent)
-            lst.append(RulePlugin.from_dict(ent))
+            lst.append(RulePlugin.from_dict(ent, defaults))
         return RuleSet(lst)
 
     def to_list(self) -> List[Dict]:
@@ -291,10 +308,12 @@ class RuleTree(List[RuleSet]):
         return False
 
     @classmethod
-    def from_list(cls, ruledefs: List[List[dict]], rgen: RuleIdGenerator) -> "RuleTree":
+    def from_list(
+        cls, ruledefs: List[List[dict]], rgen: RuleIdGenerator, defaults=None
+    ) -> "RuleTree":
         ini = []
         for ent in ruledefs:
-            rset = RuleSet.from_list(ent, rgen)
+            rset = RuleSet.from_list(ent, rgen, defaults)
             ini.append(rset)
         return RuleTree(ini)
 
@@ -334,18 +353,26 @@ class RuleEngine:
         return tree.approve_request(request)
 
     @classmethod
-    def from_yml_file(cls, yml: Union["Path", str]):
+    def from_yml_file(
+        cls, yml: Union["Path", str], *, defaults: Dict[str, Dict[str, Any]] = {}
+    ) -> "RuleEngine":
         """Build a rule engine from a yml file, see `from_dict` for more info."""
         log.debug("from_yml_file loading %s", yml)
         with open(yml, "r", encoding="utf8") as fh:
             info: dict = yaml.safe_load(fh)
-            return cls.from_dict(info)
+            return cls.from_dict(info, defaults=defaults)
 
     @classmethod
     def from_dict(
-        cls, info: Dict[str, Union[Dict[str, Any], List[List[dict]]]]
+        cls,
+        info: Dict[str, Union[Dict[str, Any], List[List[dict]]]],
+        *,
+        defaults: Dict[str, Dict[str, Any]] = {}
     ) -> "RuleEngine":
         """Build a rule engine from a dictionary:
+
+        Pass a "defaults" dictionary which is used to set per-rule default values, if
+        not present in the config.
 
         Example:
         ```
@@ -362,7 +389,7 @@ class RuleEngine:
         rule_map = {}
         for rtype, treedef in info.items():
             rtype = RequestType(rtype)
-            tree = RuleTree.from_list(treedef, rgen)
+            tree = RuleTree.from_list(treedef, rgen, defaults)
             rule_map[rtype] = tree
         return cls(rule_map)
 

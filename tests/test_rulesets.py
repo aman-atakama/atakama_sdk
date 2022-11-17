@@ -17,6 +17,7 @@ from atakama import (
     RuleEngine,
     RuleTree,
     MetaInfo,
+    RuleIdGenerator,
 )
 
 
@@ -292,9 +293,6 @@ def test_rule_id_loads(tmp_path):
         def name():
             return "example_loader"
 
-        def __init__(self, args):
-            super().__init__(args)
-
         def approve_request(self, request):
             return True
 
@@ -467,9 +465,6 @@ def test_rule_id_return():
         def name():
             return "example_loader"
 
-        def __init__(self, args):
-            super().__init__(args)
-
         def approve_request(self, request):
             return request.device_id == bytes.fromhex(self.args["param"])
 
@@ -499,3 +494,40 @@ def test_rule_id_return():
     rs = re.get_rule_set(ret1)
 
     assert rs.find_rules(ExampleRule)[0].args["param"] == b"1".hex()
+
+
+def test_default_arg_override():
+    args = {"a": 2}
+    defaults = {"x": 1}
+    RulePlugin.set_args_defaults(args, defaults)
+    assert args["x"] == 1
+
+    args = {"a": 2}
+    RulePlugin.set_args_defaults(args, None)
+    assert args == {"a": 2}
+
+    args = {"a": {"b": "c"}, "d": 4}
+    defaults = {"a": {"x": 1}}
+    RulePlugin.set_args_defaults(args, defaults)
+    assert args == {"a": {"b": "c", "x": 1}, "d": 4}
+
+
+def test_rule_engine_defaults():
+    # noinspection PyUnusedLocal
+    class ExampleRule(RulePlugin):
+        @staticmethod
+        def name():
+            return "example_loader"
+
+        def approve_request(self, request):
+            return True
+
+    info = {
+        RequestType.DECRYPT.value: [
+            [{"rule": "example_loader", "param": b"1".hex()}],
+        ]
+    }
+
+    re = RuleEngine.from_dict(info, defaults={"example_loader": {"poppy": 4}})
+    rs = next(iter(re.map[RequestType.DECRYPT]))
+    assert rs.find_rules(ExampleRule)[0].args["poppy"] == 4
